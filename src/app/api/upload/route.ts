@@ -57,16 +57,19 @@ export async function POST(req: NextRequest) {
   const filename = `${stem}${ext}`;
 
   if (HAS_BLOB) {
-    // @vercel/blob acepta File directamente; le pasamos el File del
-    // multipart sin re-bufferear.
-    const blob = await put(`imagenes/${filename}`, file, {
-      access: "public",
+    const pathname = `imagenes/${filename}`;
+    // El store está configurado private; subimos como private y
+    // exponemos via /api/image/<pathname> que proxy-fetchea con SDK.
+    await put(pathname, file, {
+      access: "private",
       contentType: file.type,
       addRandomSuffix: false,
       allowOverwrite: false,
       cacheControlMaxAge: 60 * 60 * 24 * 30, // 30 días
     });
-    return NextResponse.json({ url: blob.url });
+    // URL estable para guardar en el boletín. Si el store fuera public
+    // usaríamos blob.url directo; mientras sea private, va por proxy.
+    return NextResponse.json({ url: `/api/image/${pathname}` });
   }
 
   // Dev fallback: public/uploads/. Sirve via Next static.

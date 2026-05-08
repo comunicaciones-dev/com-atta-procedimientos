@@ -19,6 +19,7 @@
 
 import "server-only";
 
+import { get as blobGet } from "@vercel/blob";
 import { promises as fs } from "node:fs";
 import path from "node:path";
 import { createElement, type ReactElement } from "react";
@@ -156,9 +157,7 @@ async function inlineAssets(html: string): Promise<string> {
     `url("${heroBgDataUri}")`,
   );
 
-  // Imágenes subidas localmente (dev) que viven en /uploads/. En
-  // producción los uploads van a Vercel Blob (URL absoluta), así que
-  // no hay nada que reemplazar para esos.
+  // Imágenes subidas localmente (dev) que viven en /uploads/.
   const localUploads = [...out.matchAll(/(?:src|url\()(?:["']?)(\/uploads\/[^"')]+)/g)];
   for (const m of localUploads) {
     const ruta = m[1];
@@ -168,6 +167,31 @@ async function inlineAssets(html: string): Promise<string> {
       out = out.replaceAll(ruta, dataUri);
     } catch (err) {
       console.warn(`[exportHtml] no se pudo inlinear ${ruta}:`, (err as Error).message);
+    }
+  }
+
+  // Imágenes proxied via /api/image/<pathname> en producción (Blob
+  // privado). Las leemos con la SDK y las embebemos como data:URI.
+  const blobUploads = [
+    ...out.matchAll(/(?:src|url\()(?:["']?)\/api\/image\/([^"')]+)/g),
+  ];
+  for (const m of blobUploads) {
+    const blobPath = m[1];
+    try {
+      const res = await blobGet(blobPath, {
+        access: "private",
+        useCache: true,
+      });
+      if (!res || res.statusCode !== 200) continue;
+      const buf = Buffer.from(await new Response(res.stream).arrayBuffer());
+      const ct = res.blob.contentType ?? "application/octet-stream";
+      const dataUri = `data:${ct};base64,${buf.toString("base64")}`;
+      out = out.replaceAll(`/api/image/${blobPath}`, dataUri);
+    } catch (err) {
+      console.warn(
+        `[exportHtml] no se pudo inlinear /api/image/${blobPath}:`,
+        (err as Error).message,
+      );
     }
   }
 

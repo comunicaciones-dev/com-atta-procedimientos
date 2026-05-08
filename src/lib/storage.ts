@@ -14,7 +14,7 @@
 
 import { promises as fs } from "node:fs";
 import path from "node:path";
-import { del, list, put } from "@vercel/blob";
+import { del, get as blobGet, list, put } from "@vercel/blob";
 import { esBoletin, type Boletin } from "./schema";
 
 // ---------------------------------------------------------------------
@@ -112,11 +112,24 @@ function pathnameDe(id: string): string {
   return `${BLOB_PREFIX}${id}.json`;
 }
 
-/** Bust del cache CDN agregando ?t=<uploadedAt timestamp>. */
-function bustUrl(url: string, uploadedAt: Date | string): string {
-  const sep = url.includes("?") ? "&" : "?";
-  const t = uploadedAt instanceof Date ? uploadedAt.getTime() : new Date(uploadedAt).getTime();
-  return `${url}${sep}t=${t}`;
+/**
+ * Lee un blob private vía la SDK con useCache: false. Devuelve el JSON
+ * parseado o null si no existe / no es un Boletin válido.
+ */
+async function fetchBlobJson(pathname: string): Promise<Boletin | null> {
+  try {
+    const res = await blobGet(pathname, {
+      access: "private",
+      useCache: false,
+    });
+    if (!res || res.statusCode !== 200) return null;
+    const text = await new Response(res.stream).text();
+    const data = JSON.parse(text);
+    return esBoletin(data) ? data : null;
+  } catch (err) {
+    console.warn(`[storage:blob] error leyendo ${pathname}: ${(err as Error).message}`);
+    return null;
+  }
 }
 
 async function listarBlob(): Promise<Boletin[]> {
@@ -125,16 +138,8 @@ async function listarBlob(): Promise<Boletin[]> {
   do {
     const page = await list({ prefix: BLOB_PREFIX, cursor, limit: 100 });
     for (const blob of page.blobs) {
-      try {
-        const res = await fetch(bustUrl(blob.url, blob.uploadedAt), {
-          cache: "no-store",
-        });
-        if (!res.ok) continue;
-        const data = await res.json();
-        if (esBoletin(data)) out.push(data);
-      } catch (err) {
-        console.warn(`[storage:blob] saltando ${blob.pathname}: ${(err as Error).message}`);
-      }
+      const data = await fetchBlobJson(blob.pathname);
+      if (data) out.push(data);
     }
     cursor = page.cursor;
   } while (cursor);
@@ -142,26 +147,18 @@ async function listarBlob(): Promise<Boletin[]> {
 }
 
 async function leerBlob(id: string): Promise<Boletin | null> {
-  // Vercel Blob no expone GET por pathname; tenemos que listar el prefijo.
-  // Como guardamos con allowOverwrite + sin random suffix, hay 1 sólo blob.
-  const page = await list({ prefix: pathnameDe(id), limit: 1 });
-  if (page.blobs.length === 0) return null;
-  const blob = page.blobs[0];
-  const res = await fetch(bustUrl(blob.url, blob.uploadedAt), {
-    cache: "no-store",
-  });
-  if (!res.ok) return null;
-  const data = await res.json();
-  return esBoletin(data) ? data : null;
+  return fetchBlobJson(pathnameDe(id));
 }
 
 async function escribirBlob(boletin: Boletin): Promise<void> {
-  // cacheControlMaxAge no puede ser < 60 según la API de Vercel Blob
-  // (se setea a default 1 mes si lo omitimos). Compensamos en lectura
-  // con un query param ?t=<timestamp> y `cache: "no-store"` para
-  // evitar leer ediciones cacheadas en el CDN.
+  // El store está configurado como private (creado así en el dashboard).
+  // Eso hace que los blobs sean accesibles solo via SDK autenticado.
+  // Para nuestra app interna sin auth está OK — la app es la única que
+  // habla con el storage. Si en el futuro se quiere exponer URLs
+  // públicas (p.ej. para CDN-backed delivery), recreamos el store como
+  // public.
   await put(pathnameDe(boletin.id), JSON.stringify(boletin, null, 2), {
-    access: "public",
+    access: "private",
     contentType: "application/json",
     addRandomSuffix: false,
     allowOverwrite: true,
