@@ -8,7 +8,7 @@ export default async function HomePage() {
   const boletines = await listar();
   const drafts = boletines.filter((b) => b.status === "draft");
   const publicados = boletines.filter((b) => b.status === "published");
-  const isProd = !STORAGE_INFO.isDev;
+  const { isEphemeral } = STORAGE_INFO;
 
   return (
     <main className="mx-auto max-w-5xl px-6 py-12 font-sans">
@@ -21,12 +21,14 @@ export default async function HomePage() {
         </h1>
       </header>
 
-      {isProd && (
+      {isEphemeral && (
         <div className="mb-8 rounded-md border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900">
-          <strong className="font-semibold">Aviso:</strong> en producción
-          el storage corre sobre filesystem efímero de Vercel — los drafts
-          creados acá se pueden perder. Para edición persistente usar la
-          versión local (<code>npm run dev</code>) hasta Hito 5.
+          <strong className="font-semibold">Aviso:</strong> el storage de
+          producción no tiene Vercel Blob configurado todavía. Cada
+          request crea un archivo en filesystem efímero distinto, por lo
+          que crear un draft acá lleva a un 404 al abrir el editor. Para
+          activar persistencia: en Vercel dashboard → Storage → Create
+          Database → Blob → Connect to project, y redeploy.
         </div>
       )}
 

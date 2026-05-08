@@ -39,10 +39,12 @@ en vivo y publicación con URL canónica.
   render parametrizado contra el schema. **Misma altura exacta que el
   demo** (980 × 4404.765625 px) — validado en
   [`/render/seed`](src/app/render/seed/page.tsx).
-- [`src/lib/storage.ts`](src/lib/storage.ts): CRUD en archivos JSON
-  (`data/boletines/<id>.json`). Solo persistente en dev; el banner del
-  home avisa al usuario que en producción los drafts son efímeros hasta
-  que en Hito 5 se migre a Vercel Blob.
+- [`src/lib/storage.ts`](src/lib/storage.ts): CRUD con backend dual.
+  En dev local guarda archivos JSON en `data/boletines/<id>.json`. En
+  producción usa **Vercel Blob** bajo el prefijo `boletines/<id>.json`
+  (cuando `BLOB_READ_WRITE_TOKEN` está presente). Si Vercel corre sin
+  el token configurado, cae a `/tmp/data/boletines/` ephemeral y el
+  home muestra un banner pidiendo configurar Blob.
 - API Route Handlers: `GET/POST /api/boletines`, `GET/PUT/DELETE
   /api/boletines/[id]`, `POST /api/boletines/[id]/publish`.
 - [`src/styles/uatta-shield.css`](src/styles/uatta-shield.css): shield
@@ -253,8 +255,22 @@ npm run typecheck
 
 ## Despliegue
 
-Pendiente Hito 5. El repo se conectará a Vercel desde `main`; cada push
-generará un preview deploy automático.
+Conectado a Vercel desde `main`: cada push genera deploy automático.
+
+### Setup de storage en producción
+
+Para que el editor funcione end-to-end en producción:
+
+1. Vercel dashboard → tu proyecto → **Storage** tab → **Create
+   Database** → **Blob**.
+2. Nombre: `boletines`. Region: la que use el proyecto.
+3. **Connect to Project** → seleccioná el proyecto. Vercel inyecta
+   `BLOB_READ_WRITE_TOKEN` como env var automáticamente.
+4. Trigger un redeploy (push cualquier cambio o "Redeploy" en el
+   dashboard).
+
+A partir de ahí, los drafts persisten entre cold starts. El home deja
+de mostrar el banner amarillo.
 
 ---
 

@@ -1,80 +1,49 @@
 /**
- * Storage local en archivos JSON. Decisión consciente para esta etapa
- * según el brief: data/boletines/<id>.json, un archivo por boletín.
+ * Storage de boletines con backend dual:
  *
- * IMPORTANTE — entornos:
+ *  - Producción (Vercel con BLOB_READ_WRITE_TOKEN): Vercel Blob bajo
+ *    el prefijo "boletines/<id>.json". Persistente entre cold starts.
+ *  - Dev local: archivos JSON en <repo>/data/boletines/<id>.json.
+ *  - Vercel sin token (transitorio durante setup): /tmp/data/boletines/
+ *    como fallback, ephemeral. El home muestra el banner correspondiente.
  *
- *  - dev local (npm run dev): el FS persiste entre invocaciones, todo
- *    funciona como un mini-CMS persistente.
- *  - producción Vercel serverless: el FS de runtime es efímero. Los
- *    drafts creados en producción se PIERDEN al rato. Mostrar un banner
- *    al usuario en producción avisando esto, hasta que en Hito 5 se
- *    migre a Vercel Blob/KV.
- *
- * El módulo es server-only (importa node:fs). Los Route Handlers y
- * Server Components lo usan. Componentes client lo consumen vía API
- * REST en /api/boletines/*.
+ * Misma API exportada en las tres rutas para que el resto del código
+ * (Route Handlers, Server Components) no tenga que saber qué backend
+ * está activo.
  */
 
 import { promises as fs } from "node:fs";
 import path from "node:path";
-import { esBoletin, type Boletin, type BoletinStatus } from "./schema";
+import { del, list, put } from "@vercel/blob";
+import { esBoletin, type Boletin } from "./schema";
 
-/**
- * Ubicación del storage:
- *  - Local dev: <repo>/data/boletines/ (persistente entre runs).
- *  - Vercel runtime: /tmp/data/boletines/ (writable pero efímero;
- *    cada cold start arranca con el directorio vacío). Hasta que se
- *    migre a Vercel Blob/KV en Hito 5, esto evita el crash que daba
- *    al intentar escribir en el FS read-only de /var/task.
- */
-const DATA_DIR = process.env.VERCEL
+// ---------------------------------------------------------------------
+// Detección de backend
+// ---------------------------------------------------------------------
+
+const HAS_BLOB = Boolean(process.env.BLOB_READ_WRITE_TOKEN);
+const IS_VERCEL = process.env.VERCEL === "1" || !!process.env.VERCEL_URL;
+
+const FS_DIR = IS_VERCEL
   ? "/tmp/data/boletines"
   : path.join(process.cwd(), "data", "boletines");
 
-async function ensureDir() {
-  try {
-    await fs.mkdir(DATA_DIR, { recursive: true });
-  } catch (err) {
-    const code = (err as NodeJS.ErrnoException).code;
-    // FS read-only o permiso denegado: no podemos persistir, pero el
-    // resto de las operaciones de lectura caen a "no hay nada".
-    if (code === "EROFS" || code === "EACCES" || code === "EPERM") return;
-    throw err;
-  }
-}
+const BLOB_PREFIX = "boletines/";
 
-function archivoDe(id: string): string {
-  if (!/^[a-z0-9-]+$/i.test(id)) {
-    throw new Error(`id de boletín inválido: ${id}`);
-  }
-  return path.join(DATA_DIR, `${id}.json`);
-}
+export const STORAGE_INFO = {
+  backend: HAS_BLOB ? ("blob" as const) : ("fs" as const),
+  isDev: !IS_VERCEL,
+  isEphemeral: IS_VERCEL && !HAS_BLOB,
+};
+
+// ---------------------------------------------------------------------
+// API pública
+// ---------------------------------------------------------------------
 
 export async function listar(): Promise<Boletin[]> {
-  await ensureDir();
-  let archivos: string[] = [];
-  try {
-    archivos = await fs.readdir(DATA_DIR);
-  } catch (err) {
-    if ((err as NodeJS.ErrnoException).code === "ENOENT") return [];
-    throw err;
-  }
-  const boletines: Boletin[] = [];
-
-  for (const f of archivos) {
-    if (!f.endsWith(".json")) continue;
-    try {
-      const raw = await fs.readFile(path.join(DATA_DIR, f), "utf8");
-      const parsed = JSON.parse(raw);
-      if (esBoletin(parsed)) boletines.push(parsed);
-    } catch (err) {
-      console.warn(`[storage] saltando ${f}: ${(err as Error).message}`);
-    }
-  }
-
+  const items = HAS_BLOB ? await listarBlob() : await listarFs();
   // Drafts arriba (más reciente primero), publicados abajo (numero desc).
-  return boletines.sort((a, b) => {
+  return items.sort((a, b) => {
     if (a.status !== b.status) return a.status === "draft" ? -1 : 1;
     if (a.status === "published") return b.numero - a.numero;
     return b.updatedAt.localeCompare(a.updatedAt);
@@ -82,15 +51,8 @@ export async function listar(): Promise<Boletin[]> {
 }
 
 export async function leer(id: string): Promise<Boletin | null> {
-  await ensureDir();
-  try {
-    const raw = await fs.readFile(archivoDe(id), "utf8");
-    const parsed = JSON.parse(raw);
-    return esBoletin(parsed) ? parsed : null;
-  } catch (err) {
-    if ((err as NodeJS.ErrnoException).code === "ENOENT") return null;
-    throw err;
-  }
+  validarId(id);
+  return HAS_BLOB ? leerBlob(id) : leerFs(id);
 }
 
 export async function leerPorNumero(numero: number): Promise<Boletin | null> {
@@ -101,28 +63,18 @@ export async function leerPorNumero(numero: number): Promise<Boletin | null> {
 }
 
 export async function escribir(boletin: Boletin): Promise<Boletin> {
-  await ensureDir();
-  const dest = archivoDe(boletin.id);
-  const next = { ...boletin, updatedAt: new Date().toISOString() };
-  await fs.writeFile(dest, JSON.stringify(next, null, 2) + "\n", "utf8");
+  validarId(boletin.id);
+  const next: Boletin = { ...boletin, updatedAt: new Date().toISOString() };
+  if (HAS_BLOB) await escribirBlob(next);
+  else await escribirFs(next);
   return next;
 }
 
 export async function eliminar(id: string): Promise<boolean> {
-  await ensureDir();
-  try {
-    await fs.unlink(archivoDe(id));
-    return true;
-  } catch (err) {
-    if ((err as NodeJS.ErrnoException).code === "ENOENT") return false;
-    throw err;
-  }
+  validarId(id);
+  return HAS_BLOB ? eliminarBlob(id) : eliminarFs(id);
 }
 
-/**
- * Publica un draft. Asigna número automático (max(publicados.numero) + 1)
- * a menos que el draft ya tenga un override manual válido.
- */
 export async function publicar(id: string): Promise<Boletin | null> {
   const boletin = await leer(id);
   if (!boletin) return null;
@@ -132,24 +84,151 @@ export async function publicar(id: string): Promise<Boletin | null> {
   const publicados = all.filter((b) => b.status === "published");
   const numerosUsados = new Set(publicados.map((b) => b.numero));
 
-  // Si el numero del draft choca con un publicado, asignamos el siguiente
-  // disponible. En otro caso, respetamos el override manual.
   let numero = boletin.numero;
   if (numerosUsados.has(numero)) {
     const maxN = publicados.reduce((m, b) => Math.max(m, b.numero), 0);
     numero = maxN + 1;
   }
 
-  const ahora = new Date().toISOString();
   return escribir({
     ...boletin,
     status: "published",
     numero,
-    publishedAt: ahora,
+    publishedAt: new Date().toISOString(),
   });
 }
 
-export const STORAGE_INFO = {
-  dir: DATA_DIR,
-  isDev: process.env.NODE_ENV !== "production",
-};
+function validarId(id: string) {
+  if (!/^[a-z0-9-]+$/i.test(id)) {
+    throw new Error(`id de boletín inválido: ${id}`);
+  }
+}
+
+// ---------------------------------------------------------------------
+// Backend: Vercel Blob
+// ---------------------------------------------------------------------
+
+function pathnameDe(id: string): string {
+  return `${BLOB_PREFIX}${id}.json`;
+}
+
+async function listarBlob(): Promise<Boletin[]> {
+  const out: Boletin[] = [];
+  let cursor: string | undefined;
+  do {
+    const page = await list({ prefix: BLOB_PREFIX, cursor, limit: 100 });
+    for (const blob of page.blobs) {
+      try {
+        const res = await fetch(blob.url, { cache: "no-store" });
+        if (!res.ok) continue;
+        const data = await res.json();
+        if (esBoletin(data)) out.push(data);
+      } catch (err) {
+        console.warn(`[storage:blob] saltando ${blob.pathname}: ${(err as Error).message}`);
+      }
+    }
+    cursor = page.cursor;
+  } while (cursor);
+  return out;
+}
+
+async function leerBlob(id: string): Promise<Boletin | null> {
+  // Vercel Blob no expone GET por pathname; tenemos que listar el prefijo.
+  // Como guardamos con allowOverwrite + sin random suffix, hay 1 sólo blob.
+  const page = await list({ prefix: pathnameDe(id), limit: 1 });
+  if (page.blobs.length === 0) return null;
+  const res = await fetch(page.blobs[0].url, { cache: "no-store" });
+  if (!res.ok) return null;
+  const data = await res.json();
+  return esBoletin(data) ? data : null;
+}
+
+async function escribirBlob(boletin: Boletin): Promise<void> {
+  await put(pathnameDe(boletin.id), JSON.stringify(boletin, null, 2), {
+    access: "public",
+    contentType: "application/json",
+    addRandomSuffix: false,
+    allowOverwrite: true,
+    cacheControlMaxAge: 0,
+  });
+}
+
+async function eliminarBlob(id: string): Promise<boolean> {
+  const page = await list({ prefix: pathnameDe(id), limit: 1 });
+  if (page.blobs.length === 0) return false;
+  await del(page.blobs.map((b) => b.url));
+  return true;
+}
+
+// ---------------------------------------------------------------------
+// Backend: filesystem (dev local + fallback ephemeral en Vercel sin token)
+// ---------------------------------------------------------------------
+
+async function ensureFsDir() {
+  try {
+    await fs.mkdir(FS_DIR, { recursive: true });
+  } catch (err) {
+    const code = (err as NodeJS.ErrnoException).code;
+    if (code === "EROFS" || code === "EACCES" || code === "EPERM") return;
+    throw err;
+  }
+}
+
+function archivoFs(id: string): string {
+  return path.join(FS_DIR, `${id}.json`);
+}
+
+async function listarFs(): Promise<Boletin[]> {
+  await ensureFsDir();
+  let archivos: string[] = [];
+  try {
+    archivos = await fs.readdir(FS_DIR);
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code === "ENOENT") return [];
+    throw err;
+  }
+  const out: Boletin[] = [];
+  for (const f of archivos) {
+    if (!f.endsWith(".json")) continue;
+    try {
+      const raw = await fs.readFile(path.join(FS_DIR, f), "utf8");
+      const parsed = JSON.parse(raw);
+      if (esBoletin(parsed)) out.push(parsed);
+    } catch (err) {
+      console.warn(`[storage:fs] saltando ${f}: ${(err as Error).message}`);
+    }
+  }
+  return out;
+}
+
+async function leerFs(id: string): Promise<Boletin | null> {
+  await ensureFsDir();
+  try {
+    const raw = await fs.readFile(archivoFs(id), "utf8");
+    const parsed = JSON.parse(raw);
+    return esBoletin(parsed) ? parsed : null;
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code === "ENOENT") return null;
+    throw err;
+  }
+}
+
+async function escribirFs(boletin: Boletin): Promise<void> {
+  await ensureFsDir();
+  await fs.writeFile(
+    archivoFs(boletin.id),
+    JSON.stringify(boletin, null, 2) + "\n",
+    "utf8",
+  );
+}
+
+async function eliminarFs(id: string): Promise<boolean> {
+  await ensureFsDir();
+  try {
+    await fs.unlink(archivoFs(id));
+    return true;
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code === "ENOENT") return false;
+    throw err;
+  }
+}
