@@ -51,42 +51,52 @@ function slidePortada(pres: PptxGenJS, b: Boletin): void {
 
   // Barra roja institucional al borde superior izquierdo
   slide.addShape("rect", {
-    x: 0.5, y: 0.4, w: 0.08, h: 1,
+    x: 0.5, y: 0.5, w: 0.08, h: 0.6,
     fill: { color: RED }, line: { color: RED },
   });
 
   slide.addText(stripInline(b.hero.eyebrow).toUpperCase(), {
-    x: 0.7, y: 0.5, w: 12, h: 0.4,
+    x: 0.7, y: 0.55, w: 12, h: 0.5,
     fontFace: "Calibri", fontSize: 12, bold: true, color: "FFFFFF",
     charSpacing: 18,
   });
 
+  // Título: 4 líneas de espacio, autoFit reduce font si es muy largo.
   slide.addText(stripInline(b.hero.titulo), {
-    x: 0.7, y: 1.1, w: 12, h: 2.5,
-    fontFace: "Calibri", fontSize: 38, bold: true, color: "FFFFFF",
+    x: 0.7, y: 1.2, w: 12, h: 3.2,
+    fontFace: "Calibri", fontSize: 36, bold: true, color: "FFFFFF",
+    valign: "top",
+    autoFit: true,
   });
 
   slide.addText(stripInline(b.hero.subtitulo), {
-    x: 0.7, y: 4, w: 11, h: 1.5,
-    fontFace: "Calibri", fontSize: 16, color: "DDE0E8",
-    paraSpaceBefore: 8, paraSpaceAfter: 8,
+    x: 0.7, y: 4.55, w: 11, h: 1.3,
+    fontFace: "Calibri", fontSize: 14, color: "DDE0E8",
+    valign: "top",
+    paraSpaceBefore: 4, paraSpaceAfter: 4,
+    autoFit: true,
   });
 
-  // Caja REX inferior
-  slide.addShape("rect", {
-    x: 0.7, y: 5.8, w: 6.5, h: 0.9,
-    fill: { color: RED }, line: { color: RED },
-  });
-  slide.addText("REX", {
-    x: 0.95, y: 5.95, w: 0.7, h: 0.6,
-    fontFace: "Calibri", fontSize: 11, bold: true, color: "FFFFFF",
-    align: "center",
-  });
+  // Caja REX inferior — botón en una sola pieza (rect con texto adentro).
   slide.addText(
-    `N° ${b.hero.rex.numero}/${b.hero.rex.anio} · ${stripInline(b.hero.rex.descripcion)}`,
+    [
+      {
+        text: "REX  ",
+        options: { bold: true, fontSize: 11, color: "FFFFFF" },
+      },
+      {
+        text: `N° ${b.hero.rex.numero}/${b.hero.rex.anio} · ${stripInline(b.hero.rex.descripcion)}`,
+        options: { bold: true, fontSize: 14, color: "FFFFFF" },
+      },
+    ],
     {
-      x: 1.7, y: 5.95, w: 5.4, h: 0.6,
-      fontFace: "Calibri", fontSize: 14, bold: true, color: "FFFFFF",
+      x: 0.7, y: 5.95, w: 7, h: 0.85,
+      shape: "rect",
+      fill: { color: RED },
+      line: { color: RED },
+      fontFace: "Calibri",
+      valign: "middle",
+      margin: 0.18,
     },
   );
 
@@ -94,7 +104,7 @@ function slidePortada(pres: PptxGenJS, b: Boletin): void {
   slide.addText(
     `Edición N° ${String(b.numero).padStart(2, "0")} · ${b.fecha.mes} ${b.fecha.anio}`,
     {
-      x: 0.7, y: 6.95, w: 12, h: 0.3,
+      x: 0.7, y: 7.05, w: 12, h: 0.3,
       fontFace: "Calibri", fontSize: 11, color: "AAB0BB",
       charSpacing: 12,
     },
@@ -102,7 +112,7 @@ function slidePortada(pres: PptxGenJS, b: Boletin): void {
   slide.addText(
     "Gobierno de Chile · Ministerio de Hacienda · Unidad Administradora TTA-TCP",
     {
-      x: 0.7, y: 7.2, w: 12, h: 0.25,
+      x: 0.7, y: 7.3, w: 12, h: 0.25,
       fontFace: "Calibri", fontSize: 10, color: "8088A0",
       charSpacing: 10,
     },
@@ -116,14 +126,17 @@ function slideSeccion(pres: PptxGenJS, b: Boletin, idx: number): void {
 
   const numero = String(idx + 1).padStart(2, "0");
 
-  // Encabezado: número rojo + título navy
+  // Encabezado: número rojo + título navy en línea base alineada.
   slide.addText(numero, {
-    x: 0.5, y: 0.5, w: 1, h: 1,
-    fontFace: "Calibri", fontSize: 56, bold: true, color: RED,
+    x: 0.5, y: 0.45, w: 1.1, h: 1.1,
+    fontFace: "Calibri", fontSize: 54, bold: true, color: RED,
+    valign: "middle", align: "left",
   });
   slide.addText(stripInline(seccion.titulo), {
-    x: 1.6, y: 0.55, w: 11, h: 1.1,
-    fontFace: "Calibri", fontSize: 28, bold: true, color: NAVY,
+    x: 1.65, y: 0.45, w: 11.2, h: 1.1,
+    fontFace: "Calibri", fontSize: 26, bold: true, color: NAVY,
+    valign: "middle",
+    autoFit: true,
   });
 
   // Línea separadora
@@ -132,19 +145,25 @@ function slideSeccion(pres: PptxGenJS, b: Boletin, idx: number): void {
     line: { color: "DCDFE6", width: 1 },
   });
 
-  // Cuerpo: bullets a partir de los bloques de la sección
+  // Cuerpo: bullets a partir de los bloques de la sección. autoFit
+  // reduce el font si hay muchos items para que no haya overflow.
   const bullets = bulletsDeBloques(seccion.bloques);
   if (bullets.length > 0) {
     slide.addText(
-      bullets.map((b) => ({
-        text: b.text,
-        options: { bullet: b.bullet, indentLevel: b.level },
+      bullets.map((bl) => ({
+        text: bl.text,
+        options: {
+          bullet: bl.bullet,
+          indentLevel: bl.level,
+          paraSpaceBefore: 2,
+          paraSpaceAfter: 2,
+        },
       })),
       {
-        x: 0.7, y: 1.95, w: 12, h: 5,
-        fontFace: "Calibri", fontSize: 16, color: FG_2,
-        paraSpaceBefore: 4, paraSpaceAfter: 4,
+        x: 0.6, y: 1.85, w: 12.2, h: 5.2,
+        fontFace: "Calibri", fontSize: 14, color: FG_2,
         valign: "top",
+        autoFit: true,
       },
     );
   }
@@ -153,7 +172,7 @@ function slideSeccion(pres: PptxGenJS, b: Boletin, idx: number): void {
   slide.addText(
     `Boletín de Procedimientos · N° ${String(b.numero).padStart(2, "0")} · ${b.fecha.mes} ${b.fecha.anio}`,
     {
-      x: 0.5, y: 7.15, w: 12, h: 0.3,
+      x: 0.5, y: 7.2, w: 12, h: 0.25,
       fontFace: "Calibri", fontSize: 9, color: FG_3,
     },
   );
@@ -164,23 +183,26 @@ function slideFlujo(pres: PptxGenJS, flujo: NonNullable<Boletin["flujo"]>): void
   slide.background = { color: BG_GRIS };
 
   slide.addText("Flujo de responsabilidades", {
-    x: 0.5, y: 0.5, w: 12, h: 0.7,
+    x: 0.5, y: 0.4, w: 12, h: 0.6,
     fontFace: "Calibri", fontSize: 24, bold: true, color: NAVY,
+    valign: "middle",
   });
 
   slide.addText(stripInline(flujo.intro), {
-    x: 0.5, y: 1.3, w: 12, h: 0.8,
-    fontFace: "Calibri", fontSize: 13, color: FG_2,
+    x: 0.5, y: 1.05, w: 12, h: 0.8,
+    fontFace: "Calibri", fontSize: 12, color: FG_2,
     italic: true,
+    valign: "top",
+    autoFit: true,
   });
 
-  // Pasos en 2 columnas (5 izq + 4 der), igual que el render
+  // Pasos en 2 columnas (5 izq + 4 der), igual que el render web.
   const cols = 2;
   const rows = 5;
   const startX = 0.5;
-  const startY = 2.3;
+  const startY = 2.05;
   const colW = 6.15;
-  const rowH = 0.95;
+  const rowH = 1.05;
   const gapX = 0.2;
 
   flujo.pasos.forEach((paso, i) => {
@@ -191,27 +213,29 @@ function slideFlujo(pres: PptxGenJS, flujo: NonNullable<Boletin["flujo"]>): void
     const y = startY + row * rowH;
     const accent = i < 5 ? RED : NAVY;
 
-    // Círculo numerado
-    slide.addShape("ellipse", {
-      x, y: y + 0.15, w: 0.45, h: 0.45,
-      fill: { color: accent }, line: { color: accent },
-    });
+    // Círculo numerado: shape + texto integrados en un solo elemento
+    // (addText con shape: "ellipse"). Esto garantiza centrado vertical
+    // perfecto del número, vs el approach anterior con shape y text
+    // separados que solían quedar 1-2 px desfasados.
     slide.addText(String(i + 1), {
-      x, y: y + 0.18, w: 0.45, h: 0.45,
+      x, y: y + 0.12, w: 0.5, h: 0.5,
+      shape: "ellipse",
+      fill: { color: accent }, line: { color: accent },
       fontFace: "Calibri", fontSize: 14, bold: true, color: "FFFFFF",
-      align: "center",
+      align: "center", valign: "middle",
     });
 
-    // Bloque texto
+    // Bloque texto al lado del círculo, valign middle para alinear con
+    // el centro del círculo independiente del largo del rol.
     slide.addText(
       [
-        { text: stripInline(paso.rol) + "\n", options: { bold: true, color: NAVY, fontSize: 13 } },
+        { text: stripInline(paso.rol), options: { bold: true, color: NAVY, fontSize: 13, breakLine: true } },
         { text: stripInline(paso.descripcion), options: { color: FG_2, fontSize: 11 } },
       ],
       {
-        x: x + 0.55, y: y, w: colW - 0.6, h: rowH - 0.05,
+        x: x + 0.6, y: y, w: colW - 0.65, h: rowH - 0.05,
         fontFace: "Calibri",
-        valign: "top",
+        valign: "middle",
       },
     );
   });
@@ -267,13 +291,23 @@ function bulletsDeBloques(bloques: SeccionBloque[]): BulletLine[] {
 function bulletsDeTarjeta(t: TarjetaGrid): BulletLine[] {
   const out: BulletLine[] = [];
   if (t.tipo === "media") {
-    if (t.caption) out.push({ text: "🖼  " + stripInline(t.caption), bullet: false, level: 0 });
+    if (t.caption)
+      out.push({
+        text: "[Imagen] " + stripInline(t.caption),
+        bullet: false,
+        level: 0,
+      });
     return out;
   }
   if (t.tipo === "cta") {
     if (t.titulo) out.push({ text: stripInline(t.titulo), bullet: false, level: 0 });
     if (t.descripcion) out.push({ text: stripInline(t.descripcion), bullet: false, level: 1 });
-    if (t.url && t.label) out.push({ text: `🔗 ${t.label} → ${t.url}`, bullet: false, level: 1 });
+    if (t.url && t.label)
+      out.push({
+        text: `${t.label} → ${t.url}`,
+        bullet: false,
+        level: 1,
+      });
     return out;
   }
   // normal
