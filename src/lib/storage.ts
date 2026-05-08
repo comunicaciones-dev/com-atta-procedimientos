@@ -20,10 +20,28 @@ import { promises as fs } from "node:fs";
 import path from "node:path";
 import { esBoletin, type Boletin, type BoletinStatus } from "./schema";
 
-const DATA_DIR = path.join(process.cwd(), "data", "boletines");
+/**
+ * Ubicación del storage:
+ *  - Local dev: <repo>/data/boletines/ (persistente entre runs).
+ *  - Vercel runtime: /tmp/data/boletines/ (writable pero efímero;
+ *    cada cold start arranca con el directorio vacío). Hasta que se
+ *    migre a Vercel Blob/KV en Hito 5, esto evita el crash que daba
+ *    al intentar escribir en el FS read-only de /var/task.
+ */
+const DATA_DIR = process.env.VERCEL
+  ? "/tmp/data/boletines"
+  : path.join(process.cwd(), "data", "boletines");
 
 async function ensureDir() {
-  await fs.mkdir(DATA_DIR, { recursive: true });
+  try {
+    await fs.mkdir(DATA_DIR, { recursive: true });
+  } catch (err) {
+    const code = (err as NodeJS.ErrnoException).code;
+    // FS read-only o permiso denegado: no podemos persistir, pero el
+    // resto de las operaciones de lectura caen a "no hay nada".
+    if (code === "EROFS" || code === "EACCES" || code === "EPERM") return;
+    throw err;
+  }
 }
 
 function archivoDe(id: string): string {
@@ -35,7 +53,13 @@ function archivoDe(id: string): string {
 
 export async function listar(): Promise<Boletin[]> {
   await ensureDir();
-  const archivos = await fs.readdir(DATA_DIR);
+  let archivos: string[] = [];
+  try {
+    archivos = await fs.readdir(DATA_DIR);
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code === "ENOENT") return [];
+    throw err;
+  }
   const boletines: Boletin[] = [];
 
   for (const f of archivos) {
