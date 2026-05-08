@@ -95,6 +95,19 @@ en vivo y publicación con URL canónica.
 
 ---
 
+## Backlog (post-Hito 5)
+
+- **Importar boletín desde JSON**: endpoint para subir un archivo
+  `Boletin.json` (generado fuera del aplicativo, p. ej. desde un chat
+  Claude que recibió el texto a comunicar y produjo la estructura
+  ordenada según el schema). El endpoint validaría con `esBoletin()`,
+  asignaría id+createdAt nuevos y crearía un draft listo para editar.
+  Workflow: chat genera estructura → app importa → usuario ajusta.
+  El schema completo de `Boletin` (en [schema.ts](src/lib/schema.ts))
+  ya sirve de "plantilla" para que el chat sepa qué producir.
+
+---
+
 ## Lectura del HTML de referencia
 
 [referencia/boletin-sistema-diseno.html](referencia/boletin-sistema-diseno.html)

@@ -20,7 +20,7 @@ import type {
   AudienciaItem,
   Boletin as BoletinModel,
   Hero,
-  IconoGasto,
+  Icono,
   Seccion,
   SeccionBloque,
   TarjetaGrid,
@@ -234,82 +234,173 @@ function TarjetasGrid({
   tarjetas,
 }: Extract<SeccionBloque, { tipo: "tarjetas-grid" }>) {
   const v = variante ?? "simple";
+  const gridStyle =
+    columnas === 3 ? { gridTemplateColumns: "repeat(3, 1fr)" } : undefined;
+
+  // Wrapper común que respeta `full` por tarjeta.
+  const wrap = (i: number, t: TarjetaGrid, child: React.ReactNode) => (
+    <CardWrapper key={i} t={t}>
+      {child}
+    </CardWrapper>
+  );
+
+  function renderTarjeta(t: TarjetaGrid): React.ReactNode {
+    if (t.tipo === "media") return <MediaCard tarjeta={t} />;
+    if (t.tipo === "cta") return <CtaCard tarjeta={t} />;
+    // tipo === "normal" o undefined → sigue el render de la variante.
+    return null;
+  }
 
   if (v === "resp") {
     return (
-      <div className="uatta-grid-2">
-        {tarjetas.map((t, i) => (
-          <article key={i} className="uatta-resp-card">
-            {t.etiqueta && (
-              <span className="uatta-step">{parseInline(t.etiqueta)}</span>
-            )}
-            <h3>{parseInline(t.titulo)}</h3>
-            {t.who && (
-              <p className="uatta-who">{parseInline(t.who)}</p>
-            )}
-            <ul>
-              {(t.items ?? []).map((it, j) => (
-                <li key={j}>{parseInline(it)}</li>
-              ))}
-            </ul>
-          </article>
-        ))}
+      <div className="uatta-grid-2" style={gridStyle}>
+        {tarjetas.map((t, i) => {
+          const especial = renderTarjeta(t);
+          if (especial) return wrap(i, t, especial);
+          return wrap(
+            i,
+            t,
+            <article className="uatta-resp-card">
+              {t.etiqueta && (
+                <span className="uatta-step">{parseInline(t.etiqueta)}</span>
+              )}
+              <h3>{parseInline(t.titulo ?? "")}</h3>
+              {t.who && (
+                <p className="uatta-who">{parseInline(t.who)}</p>
+              )}
+              <ul>
+                {(t.items ?? []).map((it, j) => (
+                  <li key={j}>{parseInline(it)}</li>
+                ))}
+              </ul>
+            </article>,
+          );
+        })}
       </div>
     );
   }
 
   if (v === "simple") {
-    // uatta-grid-req es el contenedor para 02; ajustamos columnas via grid CSS.
-    const gridClass = "uatta-grid-req";
     return (
-      <div className={gridClass}>
-        {tarjetas.map((t, i) => (
-          <div key={i} className="uatta-req">
-            <h4>{parseInline(t.titulo)}</h4>
-            <ul>
-              {(t.items ?? []).map((it, j) => (
-                <li key={j}>{parseInline(it)}</li>
-              ))}
-            </ul>
-          </div>
-        ))}
+      <div className="uatta-grid-req" style={gridStyle}>
+        {tarjetas.map((t, i) => {
+          const especial = renderTarjeta(t);
+          if (especial) return wrap(i, t, especial);
+          return wrap(
+            i,
+            t,
+            <div className="uatta-req">
+              <h4>{parseInline(t.titulo ?? "")}</h4>
+              <ul>
+                {(t.items ?? []).map((it, j) => (
+                  <li key={j}>{parseInline(it)}</li>
+                ))}
+              </ul>
+            </div>,
+          );
+        })}
       </div>
     );
   }
 
   if (v === "gasto") {
     return (
-      <div className="uatta-gastos">
-        {tarjetas.map((t, i) => (
-          <GastoCard key={i} tarjeta={t} />
-        ))}
+      <div className="uatta-gastos" style={gridStyle}>
+        {tarjetas.map((t, i) => {
+          const especial = renderTarjeta(t);
+          if (especial) return wrap(i, t, especial);
+          return wrap(i, t, <GastoCard tarjeta={t} />);
+        })}
       </div>
     );
   }
 
   // v === "caso"
   return (
-    <div className="uatta-tram">
-      {tarjetas.map((t, i) => (
-        <article
-          key={i}
-          className={`uatta-tram__card${t.tono === "azul" ? " alt" : ""}`}
-        >
-          <div className="uatta-tram__top">
-            {parseInline(t.etiqueta ?? "")}
-            {t.badge && (
-              <span className="uatta-badge">{parseInline(t.badge)}</span>
-            )}
-          </div>
-          <div className="uatta-tram__body">
-            <h4>{parseInline(t.titulo)}</h4>
-            {(t.parrafos ?? []).map((p, j) => (
-              <p key={j}>{parseInline(p)}</p>
-            ))}
-          </div>
-        </article>
-      ))}
+    <div className="uatta-tram" style={gridStyle}>
+      {tarjetas.map((t, i) => {
+        const especial = renderTarjeta(t);
+        if (especial) return wrap(i, t, especial);
+        return wrap(
+          i,
+          t,
+          <article
+            className={`uatta-tram__card${t.tono === "azul" ? " alt" : ""}`}
+          >
+            <div className="uatta-tram__top">
+              {parseInline(t.etiqueta ?? "")}
+              {t.badge && (
+                <span className="uatta-badge">{parseInline(t.badge)}</span>
+              )}
+            </div>
+            <div className="uatta-tram__body">
+              <h4>{parseInline(t.titulo ?? "")}</h4>
+              {(t.parrafos ?? []).map((p, j) => (
+                <p key={j}>{parseInline(p)}</p>
+              ))}
+            </div>
+          </article>,
+        );
+      })}
     </div>
+  );
+}
+
+/**
+ * Wrapper que aplica `grid-column: 1/-1` cuando la tarjeta es full.
+ * El wrapper es un fragment de React si no hay full, o un div con
+ * className uatta-grid-full si sí.
+ *
+ * Tomamos esta estrategia (wrapper) en lugar de pasar la prop al hijo
+ * porque las tarjetas tienen elementos ya tipados (article, div) que no
+ * siempre podemos modificar sin romper el styling. Un wrapper extra es
+ * el mínimo cambio en DOM con el efecto deseado.
+ *
+ * Excepto para tarjetas .uatta-gasto donde la regla --full ya existe en
+ * uatta.css con la misma especificidad — para esas, no envolvemos.
+ */
+function CardWrapper({
+  t,
+  children,
+}: {
+  t: TarjetaGrid;
+  children: React.ReactNode;
+}) {
+  if (!t.full) return <>{children}</>;
+  return <div className="uatta-grid-full">{children}</div>;
+}
+
+function MediaCard({ tarjeta }: { tarjeta: TarjetaGrid }) {
+  if (!tarjeta.src) return null;
+  return (
+    <figure className="uatta-media-card">
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src={tarjeta.src} alt={tarjeta.alt ?? ""} />
+      {tarjeta.caption && (
+        <figcaption>{parseInline(tarjeta.caption)}</figcaption>
+      )}
+    </figure>
+  );
+}
+
+function CtaCard({ tarjeta }: { tarjeta: TarjetaGrid }) {
+  return (
+    <article className="uatta-cta-card">
+      {tarjeta.titulo && <h4>{parseInline(tarjeta.titulo)}</h4>}
+      {tarjeta.descripcion && (
+        <p>{parseInline(tarjeta.descripcion)}</p>
+      )}
+      {tarjeta.url && tarjeta.label && (
+        <a href={tarjeta.url} target="_blank" rel="noopener">
+          {tarjeta.ctaIcono && (
+            <span className="uatta-cta-card__icon" aria-hidden="true">
+              <IconoSvg icono={tarjeta.ctaIcono} />
+            </span>
+          )}
+          {parseInline(tarjeta.label)}
+        </a>
+      )}
+    </article>
   );
 }
 
@@ -335,7 +426,7 @@ function GastoCard({ tarjeta }: { tarjeta: TarjetaGrid }) {
           <IconoSvg icono={tarjeta.icono!} />
         </span>
         <h4>
-          {parseInline(tarjeta.titulo)}
+          {parseInline(tarjeta.titulo ?? "")}
           {tarjeta.subtitulo && (
             <span
               style={{
@@ -376,7 +467,11 @@ function GastoCard({ tarjeta }: { tarjeta: TarjetaGrid }) {
   );
 }
 
-function IconoSvg({ icono }: { icono: IconoGasto }) {
+/**
+ * Catálogo de íconos. Trazos basados en Lucide / Heroicons (MIT).
+ * 18×18 viewBox 0 0 24 24, stroke 2, line-cap round.
+ */
+function IconoSvg({ icono }: { icono: Icono }) {
   const common = {
     width: 18,
     height: 18,
@@ -419,6 +514,152 @@ function IconoSvg({ icono }: { icono: IconoGasto }) {
           <path d="M19 17h2v-3.5L18 9H6L3 13.5V17h2" />
           <circle cx="7" cy="17" r="2" />
           <circle cx="17" cy="17" r="2" />
+        </svg>
+      );
+    case "documento":
+      return (
+        <svg {...common}>
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+          <path d="M14 2v6h6" />
+          <path d="M9 13h6M9 17h6" />
+        </svg>
+      );
+    case "archivo":
+      return (
+        <svg {...common}>
+          <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
+        </svg>
+      );
+    case "personas":
+      return (
+        <svg {...common}>
+          <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+          <circle cx="9" cy="7" r="4" />
+          <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+          <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+        </svg>
+      );
+    case "calendario":
+      return (
+        <svg {...common}>
+          <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+          <path d="M16 2v4M8 2v4M3 10h18" />
+        </svg>
+      );
+    case "dinero":
+      return (
+        <svg {...common}>
+          <line x1="12" y1="1" x2="12" y2="23" />
+          <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
+        </svg>
+      );
+    case "pago":
+      return (
+        <svg {...common}>
+          <rect x="2" y="5" width="20" height="14" rx="2" ry="2" />
+          <line x1="2" y1="10" x2="22" y2="10" />
+        </svg>
+      );
+    case "email":
+      return (
+        <svg {...common}>
+          <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
+          <polyline points="22,6 12,13 2,6" />
+        </svg>
+      );
+    case "telefono":
+      return (
+        <svg {...common}>
+          <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" />
+        </svg>
+      );
+    case "edificio":
+      return (
+        <svg {...common}>
+          <rect x="4" y="2" width="16" height="20" rx="2" ry="2" />
+          <path d="M9 22v-4h6v4" />
+          <path d="M8 6h.01M16 6h.01M12 6h.01M12 10h.01M12 14h.01M16 10h.01M16 14h.01M8 10h.01M8 14h.01" />
+        </svg>
+      );
+    case "checklist":
+      return (
+        <svg {...common}>
+          <path d="M9 11l3 3 8-8" />
+          <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />
+        </svg>
+      );
+    case "alerta":
+      return (
+        <svg {...common}>
+          <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+          <line x1="12" y1="9" x2="12" y2="13" />
+          <line x1="12" y1="17" x2="12.01" y2="17" />
+        </svg>
+      );
+    case "info":
+      return (
+        <svg {...common}>
+          <circle cx="12" cy="12" r="10" />
+          <line x1="12" y1="16" x2="12" y2="12" />
+          <line x1="12" y1="8" x2="12.01" y2="8" />
+        </svg>
+      );
+    case "estrella":
+      return (
+        <svg {...common}>
+          <polygon points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26" />
+        </svg>
+      );
+    case "candado":
+      return (
+        <svg {...common}>
+          <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+          <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+        </svg>
+      );
+    case "globo":
+      return (
+        <svg {...common}>
+          <circle cx="12" cy="12" r="10" />
+          <line x1="2" y1="12" x2="22" y2="12" />
+          <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
+        </svg>
+      );
+    case "engranaje":
+      return (
+        <svg {...common}>
+          <circle cx="12" cy="12" r="3" />
+          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
+        </svg>
+      );
+    case "libro":
+      return (
+        <svg {...common}>
+          <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
+          <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
+        </svg>
+      );
+    case "enlace":
+      return (
+        <svg {...common}>
+          <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
+          <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.72-1.71" />
+        </svg>
+      );
+    case "descarga":
+      return (
+        <svg {...common}>
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+          <polyline points="7,10 12,15 17,10" />
+          <line x1="12" y1="15" x2="12" y2="3" />
+        </svg>
+      );
+    case "impresora":
+      return (
+        <svg {...common}>
+          <polyline points="6,9 6,2 18,2 18,9" />
+          <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" />
+          <rect x="6" y="14" width="12" height="8" />
         </svg>
       );
   }

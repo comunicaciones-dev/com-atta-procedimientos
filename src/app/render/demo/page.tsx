@@ -1,4 +1,5 @@
 import "@/styles/uatta.css";
+import "@/styles/uatta-extensions.css";
 import { BoletinDemo } from "@/components/boletin/BoletinDemo";
 
 export const metadata = {

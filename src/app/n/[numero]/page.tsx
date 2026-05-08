@@ -1,4 +1,5 @@
 import "@/styles/uatta.css";
+import "@/styles/uatta-extensions.css";
 import { notFound } from "next/navigation";
 import { Boletin } from "@/components/boletin/Boletin";
 import { leerPorNumero } from "@/lib/storage";

@@ -40,7 +40,40 @@ export type AudienciaItem = {
  * convención. El parser está en src/lib/inline.ts.
  */
 
-export type IconoGasto = "bus" | "colectivo" | "taxi" | "vehiculo";
+/**
+ * Catálogo de íconos disponibles para tarjetas (variantes "gasto" y
+ * "cta"). Renombrado de IconoGasto en Hito 3.5 cuando se amplió el
+ * universo más allá de transporte. Cada uno mapea a un SVG inline en
+ * Boletin.tsx → IconoSvg().
+ */
+export type Icono =
+  | "bus"
+  | "colectivo"
+  | "taxi"
+  | "vehiculo"
+  | "documento"
+  | "archivo"
+  | "personas"
+  | "calendario"
+  | "dinero"
+  | "pago"
+  | "email"
+  | "telefono"
+  | "edificio"
+  | "checklist"
+  | "alerta"
+  | "info"
+  | "estrella"
+  | "candado"
+  | "globo"
+  | "engranaje"
+  | "libro"
+  | "enlace"
+  | "descarga"
+  | "impresora";
+
+/** Compatibilidad hacia atrás del nombre anterior. */
+export type IconoGasto = Icono;
 
 /**
  * Variantes visuales del tarjetas-grid:
@@ -56,23 +89,54 @@ export type IconoGasto = "bus" | "colectivo" | "taxi" | "vehiculo";
  */
 export type TarjetasGridVariante = "simple" | "resp" | "gasto" | "caso";
 
+/**
+ * Tipo de tarjeta dentro de un tarjetas-grid:
+ *  - "normal" (default): la tarjeta tradicional con titulo + items
+ *    (estilo definido por la variante del grid).
+ *  - "media": tarjeta de imagen para rellenar espacios vacíos del grid.
+ *  - "cta":   tarjeta de call-to-action con título, descripción y botón
+ *    enlazado (ej. "Descargar formulario").
+ *
+ * Las tres conviven en el mismo array `tarjetas` del bloque. El render
+ * dispatcha por `tipo`. Ambos "media" y "cta" honran el flag `full`.
+ */
+export type TarjetaGridTipo = "normal" | "media" | "cta";
+
 export type TarjetaGrid = {
+  /** Tipo de tarjeta (default "normal"). */
+  tipo?: TarjetaGridTipo;
+  /** Si true, la tarjeta ocupa el ancho completo del grid (1/-1). */
+  full?: boolean;
+
+  // --- normal & cta ---
   etiqueta?: string;
-  titulo: string;
+  titulo?: string;
   subtitulo?: string;
+
+  // --- normal ---
   who?: string;
-  icono?: IconoGasto;
+  icono?: Icono;
   badge?: string;
   tono?: "navy" | "azul";
   items?: string[];
   parrafos?: string[];
   /**
-   * Si está presente, el render de la variante "gasto" usa el layout
-   * especial uatta-vehiculo-detail: un párrafo a la izquierda + una caja
-   * "Incluye" a la derecha. Se usa para la tarjeta de Vehículo particular.
-   * El párrafo viene de parrafos[0]; el bullet list de items se ignora.
+   * Cuando está presente y la variante es "gasto", el render usa el
+   * layout uatta-vehiculo-detail (párrafo izq + caja "Incluye" der).
+   * El párrafo viene de parrafos[0]; el items list se ignora.
    */
   incluye?: string[];
+
+  // --- media ---
+  src?: string;
+  alt?: string;
+  caption?: string;
+
+  // --- cta ---
+  url?: string;
+  label?: string;
+  descripcion?: string;
+  ctaIcono?: Icono;
 };
 
 export type SeccionBloque =

@@ -8,12 +8,40 @@ import type {
   Flujo,
   Hero,
   HeroOverlay,
-  IconoGasto,
+  Icono,
   Seccion,
   SeccionBloque,
   TarjetaGrid,
+  TarjetaGridTipo,
   TarjetasGridVariante,
 } from "@/lib/schema";
+
+const ICONOS_OPCIONES: Array<{ value: Icono; label: string }> = [
+  { value: "bus", label: "Bus" },
+  { value: "colectivo", label: "Locomoción colectiva" },
+  { value: "taxi", label: "Taxi" },
+  { value: "vehiculo", label: "Vehículo particular" },
+  { value: "documento", label: "Documento" },
+  { value: "archivo", label: "Archivo / carpeta" },
+  { value: "personas", label: "Personas / equipo" },
+  { value: "calendario", label: "Calendario" },
+  { value: "dinero", label: "Dinero" },
+  { value: "pago", label: "Pago / tarjeta" },
+  { value: "email", label: "Correo" },
+  { value: "telefono", label: "Teléfono" },
+  { value: "edificio", label: "Edificio / institución" },
+  { value: "checklist", label: "Checklist" },
+  { value: "alerta", label: "Alerta" },
+  { value: "info", label: "Info" },
+  { value: "estrella", label: "Estrella / destacado" },
+  { value: "candado", label: "Candado / privacidad" },
+  { value: "globo", label: "Globo / web" },
+  { value: "engranaje", label: "Engranaje / ajustes" },
+  { value: "libro", label: "Libro / manual" },
+  { value: "enlace", label: "Enlace" },
+  { value: "descarga", label: "Descarga" },
+  { value: "impresora", label: "Impresora" },
+];
 import { ImagenFondoField } from "./ImagenFondoField";
 import {
   CheckboxField,
@@ -705,133 +733,224 @@ function TarjetaFields({
   tarjeta: TarjetaGrid;
   onChange: (t: TarjetaGrid) => void;
 }) {
+  const tipo = tarjeta.tipo ?? "normal";
+
   return (
     <>
-      {variante === "resp" && (
-        <TextField
-          label="Etiqueta superior"
-          value={tarjeta.etiqueta ?? ""}
-          onChange={(etiqueta) => onChange({ ...tarjeta, etiqueta })}
-          hint='Ej: "Etapa 1 · Solicitud" — uppercase azul.'
-        />
-      )}
+      <SelectField<TarjetaGridTipo>
+        label="Tipo de tarjeta"
+        value={tipo}
+        onChange={(t) =>
+          onChange({ ...tarjeta, tipo: t === "normal" ? undefined : t })
+        }
+        options={[
+          { value: "normal", label: `Normal (${variante})` },
+          { value: "media", label: "Imagen — rellena espacios vacíos" },
+          { value: "cta", label: "CTA — botón con descripción" },
+        ]}
+        hint='Las tarjetas "media" y "cta" funcionan en cualquier variante de grid; útiles para llenar slots vacíos.'
+      />
 
-      {variante === "gasto" && (
-        <SelectField
-          label="Ícono"
-          value={(tarjeta.icono ?? "bus") as IconoGasto}
-          onChange={(icono) => onChange({ ...tarjeta, icono })}
-          options={[
-            { value: "bus", label: "Bus" },
-            { value: "colectivo", label: "Locomoción colectiva" },
-            { value: "taxi", label: "Taxi" },
-            { value: "vehiculo", label: "Vehículo particular" },
-          ]}
-          hint='taxi y vehiculo se renderizan como tarjetas full-width.'
-        />
-      )}
+      <CheckboxField
+        label="Ocupar fila completa (full-width)"
+        checked={tarjeta.full ?? false}
+        onChange={(full) => onChange({ ...tarjeta, full: full || undefined })}
+        hint='Aplica grid-column: 1 / -1. Útil en grids de 3 columnas con menos cards o para resaltar una tarjeta.'
+      />
 
-      {variante === "caso" && (
+      {tipo === "media" && (
         <>
-          <SelectField
-            label="Tono superior"
-            value={(tarjeta.tono ?? "navy") as "navy" | "azul"}
-            onChange={(tono) => onChange({ ...tarjeta, tono })}
-            options={[
-              { value: "navy", label: "Navy (caso A)" },
-              { value: "azul", label: "Azul (caso B)" },
-            ]}
+          <ImagenFondoField
+            value={tarjeta.src}
+            onChange={(src) => onChange({ ...tarjeta, src })}
           />
           <TextField
-            label="Etiqueta superior"
-            value={tarjeta.etiqueta ?? ""}
-            onChange={(etiqueta) => onChange({ ...tarjeta, etiqueta })}
-            hint='Texto a la izquierda en la franja superior.'
+            label='Texto alt (accesibilidad)'
+            value={tarjeta.alt ?? ""}
+            onChange={(alt) => onChange({ ...tarjeta, alt })}
+            hint='Descripción breve de la imagen para lectores de pantalla.'
           />
           <TextField
-            label="Badge"
-            value={tarjeta.badge ?? ""}
-            onChange={(badge) => onChange({ ...tarjeta, badge })}
-            hint='Pill a la derecha, ej: "Caso A".'
+            label="Caption (opcional)"
+            value={tarjeta.caption ?? ""}
+            onChange={(caption) =>
+              onChange({ ...tarjeta, caption: caption || undefined })
+            }
+            hint={"Pie de imagen, debajo del thumbnail. " + INLINE_EMPHASIS_HINT}
           />
         </>
       )}
 
-      <TextField
-        label="Título"
-        value={tarjeta.titulo}
-        onChange={(titulo) => onChange({ ...tarjeta, titulo })}
-        hint={INLINE_EMPHASIS_HINT}
-      />
-
-      {variante === "gasto" && (
-        <TextField
-          label="Subtítulo (opcional)"
-          value={tarjeta.subtitulo ?? ""}
-          onChange={(subtitulo) =>
-            onChange({ ...tarjeta, subtitulo: subtitulo || undefined })
-          }
-          hint='Ej: "uso excepcional" — texto pequeño al lado del título.'
-        />
-      )}
-
-      {variante === "resp" && (
-        <TextField
-          label='"Responsable:" (opcional)'
-          value={tarjeta.who ?? ""}
-          onChange={(who) =>
-            onChange({ ...tarjeta, who: who || undefined })
-          }
-          hint={INLINE_EMPHASIS_HINT}
-        />
-      )}
-
-      {(variante === "simple" ||
-        variante === "resp" ||
-        variante === "gasto") &&
-        !(variante === "gasto" && tarjeta.incluye) && (
-          <ItemsListField
-            label="Items"
-            values={tarjeta.items ?? []}
-            onChange={(items) => onChange({ ...tarjeta, items })}
+      {tipo === "cta" && (
+        <>
+          <TextField
+            label="Título del CTA"
+            value={tarjeta.titulo ?? ""}
+            onChange={(titulo) => onChange({ ...tarjeta, titulo })}
             hint={INLINE_EMPHASIS_HINT}
           />
-        )}
-
-      {variante === "caso" && (
-        <ItemsListField
-          label="Párrafos"
-          values={tarjeta.parrafos ?? []}
-          onChange={(parrafos) => onChange({ ...tarjeta, parrafos })}
-          hint={INLINE_EMPHASIS_HINT}
-        />
+          <TextAreaField
+            label="Descripción"
+            value={tarjeta.descripcion ?? ""}
+            onChange={(descripcion) =>
+              onChange({ ...tarjeta, descripcion: descripcion || undefined })
+            }
+            rows={2}
+            hint={INLINE_EMPHASIS_HINT}
+          />
+          <TextField
+            label="URL del botón"
+            value={tarjeta.url ?? ""}
+            onChange={(url) => onChange({ ...tarjeta, url })}
+            placeholder="https://..."
+          />
+          <TextField
+            label="Texto del botón"
+            value={tarjeta.label ?? ""}
+            onChange={(label) => onChange({ ...tarjeta, label })}
+            placeholder="Descargar formulario"
+          />
+          <SelectField<Icono | "">
+            label="Ícono del botón (opcional)"
+            value={tarjeta.ctaIcono ?? ""}
+            onChange={(ctaIcono) =>
+              onChange({
+                ...tarjeta,
+                ctaIcono: ctaIcono === "" ? undefined : (ctaIcono as Icono),
+              })
+            }
+            options={[
+              { value: "" as Icono | "", label: "(sin ícono)" },
+              ...(ICONOS_OPCIONES as Array<{ value: Icono | ""; label: string }>),
+            ]}
+          />
+        </>
       )}
 
-      {variante === "gasto" && tarjeta.icono === "vehiculo" && (
+      {tipo === "normal" && (
         <>
-          <TextAreaField
-            label="Párrafo izquierdo (vehiculo)"
-            value={tarjeta.parrafos?.[0] ?? ""}
-            onChange={(p) =>
-              onChange({
-                ...tarjeta,
-                parrafos: [p],
-              })
-            }
-            rows={3}
-            hint='Solo se usa cuando hay "Incluye".'
+          {variante === "resp" && (
+            <TextField
+              label="Etiqueta superior"
+              value={tarjeta.etiqueta ?? ""}
+              onChange={(etiqueta) => onChange({ ...tarjeta, etiqueta })}
+              hint='Ej: "Etapa 1 · Solicitud" — uppercase azul.'
+            />
+          )}
+
+          {variante === "gasto" && (
+            <SelectField<Icono>
+              label="Ícono"
+              value={tarjeta.icono ?? "bus"}
+              onChange={(icono) => onChange({ ...tarjeta, icono })}
+              options={ICONOS_OPCIONES}
+              hint='taxi y vehiculo se renderizan como tarjetas full-width por convención visual.'
+            />
+          )}
+
+          {variante === "caso" && (
+            <>
+              <SelectField
+                label="Tono superior"
+                value={(tarjeta.tono ?? "navy") as "navy" | "azul"}
+                onChange={(tono) => onChange({ ...tarjeta, tono })}
+                options={[
+                  { value: "navy", label: "Navy (caso A)" },
+                  { value: "azul", label: "Azul (caso B)" },
+                ]}
+              />
+              <TextField
+                label="Etiqueta superior"
+                value={tarjeta.etiqueta ?? ""}
+                onChange={(etiqueta) => onChange({ ...tarjeta, etiqueta })}
+                hint='Texto a la izquierda en la franja superior.'
+              />
+              <TextField
+                label="Badge"
+                value={tarjeta.badge ?? ""}
+                onChange={(badge) => onChange({ ...tarjeta, badge })}
+                hint='Pill a la derecha, ej: "Caso A".'
+              />
+            </>
+          )}
+
+          <TextField
+            label="Título"
+            value={tarjeta.titulo ?? ""}
+            onChange={(titulo) => onChange({ ...tarjeta, titulo })}
+            hint={INLINE_EMPHASIS_HINT}
           />
-          <ItemsListField
-            label='Caja "Incluye" (derecha)'
-            values={tarjeta.incluye ?? []}
-            onChange={(incluye) =>
-              onChange({
-                ...tarjeta,
-                incluye: incluye.length > 0 ? incluye : undefined,
-              })
-            }
-            hint='Si está vacío, se renderiza la lista de items normal.'
-          />
+
+          {variante === "gasto" && (
+            <TextField
+              label="Subtítulo (opcional)"
+              value={tarjeta.subtitulo ?? ""}
+              onChange={(subtitulo) =>
+                onChange({ ...tarjeta, subtitulo: subtitulo || undefined })
+              }
+              hint='Ej: "uso excepcional" — texto pequeño al lado del título.'
+            />
+          )}
+
+          {variante === "resp" && (
+            <TextField
+              label='"Responsable:" (opcional)'
+              value={tarjeta.who ?? ""}
+              onChange={(who) =>
+                onChange({ ...tarjeta, who: who || undefined })
+              }
+              hint={INLINE_EMPHASIS_HINT}
+            />
+          )}
+
+          {(variante === "simple" ||
+            variante === "resp" ||
+            variante === "gasto") &&
+            !(variante === "gasto" && tarjeta.incluye) && (
+              <ItemsListField
+                label="Items"
+                values={tarjeta.items ?? []}
+                onChange={(items) => onChange({ ...tarjeta, items })}
+                hint={INLINE_EMPHASIS_HINT}
+              />
+            )}
+
+          {variante === "caso" && (
+            <ItemsListField
+              label="Párrafos"
+              values={tarjeta.parrafos ?? []}
+              onChange={(parrafos) => onChange({ ...tarjeta, parrafos })}
+              hint={INLINE_EMPHASIS_HINT}
+            />
+          )}
+
+          {variante === "gasto" && tarjeta.icono === "vehiculo" && (
+            <>
+              <TextAreaField
+                label="Párrafo izquierdo (vehiculo)"
+                value={tarjeta.parrafos?.[0] ?? ""}
+                onChange={(p) =>
+                  onChange({
+                    ...tarjeta,
+                    parrafos: [p],
+                  })
+                }
+                rows={3}
+                hint='Solo se usa cuando hay "Incluye".'
+              />
+              <ItemsListField
+                label='Caja "Incluye" (derecha)'
+                values={tarjeta.incluye ?? []}
+                onChange={(incluye) =>
+                  onChange({
+                    ...tarjeta,
+                    incluye: incluye.length > 0 ? incluye : undefined,
+                  })
+                }
+                hint='Si está vacío, se renderiza la lista de items normal.'
+              />
+            </>
+          )}
         </>
       )}
     </>

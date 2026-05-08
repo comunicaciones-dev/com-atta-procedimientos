@@ -1,4 +1,5 @@
 import "@/styles/uatta.css";
+import "@/styles/uatta-extensions.css";
 import "@/styles/uatta-shield.css";
 import Link from "next/link";
 import { notFound } from "next/navigation";
