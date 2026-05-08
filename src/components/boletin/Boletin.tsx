@@ -53,6 +53,12 @@ function computeHeroBackground(hero: Hero): string {
     posSize = `${posicion} center / cover`;
   } else if (encaje === "contain") {
     posSize = "center center / contain";
+  } else if (encaje === "natural") {
+    // background-size: auto → la imagen se renderiza en su tamaño
+    // natural en pixels. Sin upscale ni downscale. La posición se
+    // respeta para decidir qué parte cae en el hero cuando la imagen
+    // es más grande, o dónde se ancla cuando es más chica.
+    posSize = `${posicion} center / auto`;
   } else {
     // ancho-completo: imagen ocupa el 100% del ancho, alto auto.
     posSize = `${posicion} center / 100% auto`;

@@ -197,12 +197,18 @@ export type HeroOverlay = "institucional" | "tenue" | "ninguno";
 /**
  * Cómo encaja la imagen del hero en su contenedor:
  *  - "cover" (default): la imagen llena el hero, recortando lo que sobre.
- *  - "contain": la imagen entra entera, puede haber espacio sólido alrededor.
- *  - "ancho-completo": la imagen ocupa el 100% del ancho, alto auto. Puede
- *    dejar espacio arriba o abajo si la proporción de la imagen es más
- *    apaisada que la del hero.
+ *    Si la imagen es chica, se agranda (puede pixelarse).
+ *  - "contain": la imagen entra entera. Si es chica, igual se agranda
+ *    para tocar uno de los lados. Si es grande, se reduce.
+ *  - "ancho-completo": la imagen ocupa el 100% del ancho, alto auto.
+ *    Puede dejar espacio arriba o abajo. Imágenes chicas se agrandan.
+ *  - "natural": la imagen se muestra a su tamaño natural en pixels,
+ *    sin escalar ni para arriba ni para abajo. Si es más chica que el
+ *    hero, el resto se rellena con el gradiente institucional. Si es
+ *    más grande, se recorta. Útil cuando se subió una imagen ya
+ *    dimensionada al alto del hero (~560 px) y no se quiere upscale.
  */
-export type HeroEncaje = "cover" | "contain" | "ancho-completo";
+export type HeroEncaje = "cover" | "contain" | "ancho-completo" | "natural";
 
 /**
  * Posición horizontal de la imagen cuando el encaje recorta o no la centra.

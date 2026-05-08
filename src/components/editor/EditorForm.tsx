@@ -235,10 +235,12 @@ function HeroForm({
         value={hero.imagenEncaje ?? "cover"}
         onChange={(imagenEncaje) => onChange({ ...hero, imagenEncaje })}
         options={[
-          { value: "cover", label: "Cover (rellena el hero, puede recortar)" },
-          { value: "contain", label: "Contenida (imagen completa, puede dejar fondo)" },
-          { value: "ancho-completo", label: "Ancho completo (100% horizontal, sin recorte)" },
+          { value: "cover", label: "Cover (rellena, recorta y agranda si es chica)" },
+          { value: "contain", label: "Contenida (entera, puede agrandar si es chica)" },
+          { value: "ancho-completo", label: "Ancho completo (100% horizontal, agranda)" },
+          { value: "natural", label: "Natural (sin escalar — recomendado para imágenes ya dimensionadas)" },
         ]}
+        hint='"Natural" no agranda imágenes chicas; el espacio que sobra se rellena con el gradiente institucional.'
       />
       <SelectField<HeroPosicion>
         label="Posición de la imagen"
