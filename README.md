@@ -14,20 +14,49 @@ en vivo y publicación con URL canónica.
 
 **Hito 1 · Scaffolding + design system — completado.**
 
-- Next.js 15.1 + React 19 + TypeScript + Tailwind CSS.
+- Next.js 15.5 + React 19 + TypeScript + Tailwind CSS.
 - Sistema de diseño institucional UATTA embebido verbatim
   ([src/styles/uatta.css](src/styles/uatta.css), 708 líneas) extraído de
   [referencia/boletin-sistema-diseno.html](referencia/boletin-sistema-diseno.html).
-- Logos y fondo del hero extraídos a [public/](public/) como binarios
-  (decodificados de los base64 originales).
+- Logos y fondo del hero extraídos a [public/](public/) como binarios.
 - [`/render/demo`](src/app/render/demo/page.tsx) renderiza el boletín de
-  referencia hardcodeado, **pixel-idéntico** al original (validación lado
-  a lado: ambos artículos miden 980 × 4404.765625 px exactos).
+  referencia hardcodeado, **pixel-idéntico** al original.
 - Tailwind aislado al chrome del editor (route group
   [`(chrome)`](src/app/(chrome)/)) para que el preflight no afecte al
   render del boletín.
 
-**Lo que sigue**: Hito 2 (schema tipado + storage local en archivos JSON).
+**Hito 2 · Schema tipado + storage local — completado.**
+
+- [`src/lib/schema.ts`](src/lib/schema.ts): tipos `Boletin`, `Seccion`,
+  `SeccionBloque` (union discriminado) y `TarjetaGrid` con 4 variantes
+  visuales (`simple`, `resp`, `gasto`, `caso`) que cubren las 5 secciones
+  del REX 71/2026.
+- [`src/lib/seed.ts`](src/lib/seed.ts): `crearDraftSeed()` produce un
+  draft con todo el contenido del REX 71/2026.
+- [`src/lib/inline.ts`](src/lib/inline.ts): parser determinista para
+  inline emphasis: `[[texto]]` → `<strong>`, `//texto//` → `<em>`.
+- [`src/components/boletin/Boletin.tsx`](src/components/boletin/Boletin.tsx):
+  render parametrizado contra el schema. **Misma altura exacta que el
+  demo** (980 × 4404.765625 px) — validado en
+  [`/render/seed`](src/app/render/seed/page.tsx).
+- [`src/lib/storage.ts`](src/lib/storage.ts): CRUD en archivos JSON
+  (`data/boletines/<id>.json`). Solo persistente en dev; el banner del
+  home avisa al usuario que en producción los drafts son efímeros hasta
+  que en Hito 5 se migre a Vercel Blob.
+- API Route Handlers: `GET/POST /api/boletines`, `GET/PUT/DELETE
+  /api/boletines/[id]`, `POST /api/boletines/[id]/publish`.
+- [`src/styles/uatta-shield.css`](src/styles/uatta-shield.css): shield
+  CSS que restaura `list-style: disc` solo en las listas de `.uatta-req`,
+  `.uatta-gasto__body`, `.uatta-incluye` (las únicas que dependen del
+  default del browser) cuando coexisten con Tailwind preflight en `/edit`.
+- Rutas: `/` (listado), `/edit/new` (crea + redirige), `/edit/[id]`
+  (preview en vivo del draft, editor real en Hito 3), `/n/[numero]`
+  (vista pública canónica).
+- Flujo end-to-end probado: crear → editar → publicar → ver en `/n/1`,
+  todas mantienen las dimensiones pixel-perfect.
+
+**Lo que sigue**: Hito 3 (editor con cajas tipadas, drag-and-drop,
+autoguardado).
 
 ---
 

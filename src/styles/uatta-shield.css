@@ -1,0 +1,26 @@
+/* ============================================================
+   Tailwind preflight shield · solo se carga en rutas (chrome).
+   ============================================================
+   Cuando el editor renderiza el preview <Boletin/> dentro de una
+   ruta que también carga globals.css (Tailwind base), el preflight
+   de Tailwind hace `ul { list-style: none }` con specificity (0,0,1).
+
+   uatta.css declara `list-style: none` solo donde lo quiere
+   explícitamente (.uatta-resp-card ul, .uatta-deny ul,
+   .uatta-flow__list, .uatta-audience__list). Las listas que
+   dependen del default del browser (.uatta-req ul,
+   .uatta-gasto__body ul, .uatta-incluye ul) quedan sin bullets
+   cuando Tailwind las resetea.
+
+   Acá restauramos disc bullets sólo en esas tres listas, con
+   specificity suficiente para vencer al preflight (0,2,1 > 0,0,1)
+   pero sin tocar las que uatta.css quería sin bullets.
+
+   No se modifica uatta.css para mantener la regla verbatim del Hito 1.
+   ============================================================ */
+
+.uatta-boletin .uatta-req ul,
+.uatta-boletin .uatta-gasto__body ul,
+.uatta-boletin .uatta-incluye ul {
+  list-style: disc;
+}

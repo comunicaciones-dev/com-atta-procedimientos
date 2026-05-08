@@ -48,3 +48,8 @@ next-env.d.ts
 
 # harness local (Claude Code, etc.)
 /.claude/
+
+# storage local de drafts y publicados (se versiona conscientemente
+# si en algún momento queremos commitear contenido institucional;
+# por ahora cada entorno tiene su propio set)
+/data/
