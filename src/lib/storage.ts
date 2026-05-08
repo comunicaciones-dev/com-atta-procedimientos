@@ -112,6 +112,13 @@ function pathnameDe(id: string): string {
   return `${BLOB_PREFIX}${id}.json`;
 }
 
+/** Bust del cache CDN agregando ?t=<uploadedAt timestamp>. */
+function bustUrl(url: string, uploadedAt: Date | string): string {
+  const sep = url.includes("?") ? "&" : "?";
+  const t = uploadedAt instanceof Date ? uploadedAt.getTime() : new Date(uploadedAt).getTime();
+  return `${url}${sep}t=${t}`;
+}
+
 async function listarBlob(): Promise<Boletin[]> {
   const out: Boletin[] = [];
   let cursor: string | undefined;
@@ -119,7 +126,9 @@ async function listarBlob(): Promise<Boletin[]> {
     const page = await list({ prefix: BLOB_PREFIX, cursor, limit: 100 });
     for (const blob of page.blobs) {
       try {
-        const res = await fetch(blob.url, { cache: "no-store" });
+        const res = await fetch(bustUrl(blob.url, blob.uploadedAt), {
+          cache: "no-store",
+        });
         if (!res.ok) continue;
         const data = await res.json();
         if (esBoletin(data)) out.push(data);
@@ -137,19 +146,26 @@ async function leerBlob(id: string): Promise<Boletin | null> {
   // Como guardamos con allowOverwrite + sin random suffix, hay 1 sólo blob.
   const page = await list({ prefix: pathnameDe(id), limit: 1 });
   if (page.blobs.length === 0) return null;
-  const res = await fetch(page.blobs[0].url, { cache: "no-store" });
+  const blob = page.blobs[0];
+  const res = await fetch(bustUrl(blob.url, blob.uploadedAt), {
+    cache: "no-store",
+  });
   if (!res.ok) return null;
   const data = await res.json();
   return esBoletin(data) ? data : null;
 }
 
 async function escribirBlob(boletin: Boletin): Promise<void> {
+  // cacheControlMaxAge no puede ser < 60 según la API de Vercel Blob
+  // (se setea a default 1 mes si lo omitimos). Compensamos en lectura
+  // con un query param ?t=<timestamp> y `cache: "no-store"` para
+  // evitar leer ediciones cacheadas en el CDN.
   await put(pathnameDe(boletin.id), JSON.stringify(boletin, null, 2), {
     access: "public",
     contentType: "application/json",
     addRandomSuffix: false,
     allowOverwrite: true,
-    cacheControlMaxAge: 0,
+    cacheControlMaxAge: 60,
   });
 }
 
