@@ -19,11 +19,37 @@ import { parseInline } from "@/lib/inline";
 import type {
   AudienciaItem,
   Boletin as BoletinModel,
+  Hero,
   IconoGasto,
   Seccion,
   SeccionBloque,
   TarjetaGrid,
 } from "@/lib/schema";
+
+/**
+ * Compone el background-shorthand del hero respetando hero.imagenFondo
+ * (URL custom o default) y hero.overlayIntensidad (gradiente sobre la
+ * imagen). Override por inline style sobre la regla CSS base de
+ * .uatta-hero — uatta.css se mantiene verbatim según la regla del Hito 1.
+ *
+ * El último gradiente del shorthand actúa como fallback si la imagen no
+ * carga: replica la regla original de uatta.css.
+ */
+function computeHeroBackground(hero: Hero): string {
+  const url = hero.imagenFondo ?? "/uatta-hero-bg.jpg";
+  const fallback = "linear-gradient(135deg, var(--u-grad-1), var(--u-grad-2))";
+  const layerImagen = `url("${url}") center right / cover no-repeat`;
+  const overlay = hero.overlayIntensidad ?? "institucional";
+  switch (overlay) {
+    case "ninguno":
+      return `${layerImagen}, ${fallback}`;
+    case "tenue":
+      return `linear-gradient(135deg, rgba(28,37,87,0.45) 0%, rgba(37,48,107,0.40) 55%, rgba(0,99,175,0.35) 100%), ${layerImagen}, ${fallback}`;
+    case "institucional":
+    default:
+      return `linear-gradient(135deg, rgba(28,37,87,0.94) 0%, rgba(37,48,107,0.84) 55%, rgba(0,99,175,0.78) 100%), ${layerImagen}, ${fallback}`;
+  }
+}
 
 type Props = { boletin: BoletinModel };
 
@@ -89,9 +115,10 @@ export function Boletin({ boletin }: Props) {
 
 function HeroBlock({ boletin }: Props) {
   const rexLabel = `Descargar Resolución Exenta General N° ${boletin.hero.rex.numero} de ${boletin.hero.rex.anio}`;
+  const heroBg = computeHeroBackground(boletin.hero);
 
   return (
-    <section className="uatta-hero">
+    <section className="uatta-hero" style={{ background: heroBg }}>
       <span className="uatta-hero__eyebrow">{boletin.hero.eyebrow}</span>
       <h1>{parseInline(boletin.hero.titulo)}</h1>
       <p className="uatta-hero__sub">{parseInline(boletin.hero.subtitulo)}</p>

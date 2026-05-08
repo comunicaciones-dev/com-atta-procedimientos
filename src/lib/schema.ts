@@ -116,11 +116,26 @@ export type Flujo = {
   pasos: FlujoPaso[];
 };
 
+/**
+ * Intensidad del overlay institucional sobre la imagen del hero.
+ *
+ *  - "institucional" (default): gradiente navy/azul que oscurece la
+ *    imagen para que el texto blanco resalte. Mismas alphas que la
+ *    referencia (0.94, 0.84, 0.78).
+ *  - "tenue": overlay sutil — solo un velo para legibilidad. Alphas
+ *    0.45, 0.40, 0.35.
+ *  - "ninguno": sin gradiente sobre la imagen. La imagen se ve en sus
+ *    colores naturales. El usuario asume que el texto puede tener menor
+ *    contraste según la imagen.
+ */
+export type HeroOverlay = "institucional" | "tenue" | "ninguno";
+
 export type Hero = {
   eyebrow: string;
   titulo: string;
   subtitulo: string;
   imagenFondo?: string;
+  overlayIntensidad?: HeroOverlay;
   rex: {
     numero: string;
     anio: number;

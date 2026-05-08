@@ -7,12 +7,14 @@ import type {
   Footer as FooterModel,
   Flujo,
   Hero,
+  HeroOverlay,
   IconoGasto,
   Seccion,
   SeccionBloque,
   TarjetaGrid,
   TarjetasGridVariante,
 } from "@/lib/schema";
+import { ImagenFondoField } from "./ImagenFondoField";
 import {
   CheckboxField,
   ItemsListField,
@@ -193,6 +195,23 @@ function HeroForm({
         onChange={(subtitulo) => onChange({ ...hero, subtitulo })}
         rows={3}
         hint={INLINE_EMPHASIS_HINT}
+      />
+      <ImagenFondoField
+        value={hero.imagenFondo}
+        onChange={(imagenFondo) => onChange({ ...hero, imagenFondo })}
+      />
+      <SelectField<HeroOverlay>
+        label="Overlay sobre la imagen"
+        value={hero.overlayIntensidad ?? "institucional"}
+        onChange={(overlayIntensidad) =>
+          onChange({ ...hero, overlayIntensidad })
+        }
+        options={[
+          { value: "institucional", label: "Institucional (gradiente navy/azul)" },
+          { value: "tenue", label: "Tenue (velo sutil)" },
+          { value: "ninguno", label: "Ninguno (imagen sin gradiente)" },
+        ]}
+        hint='Recomendado "institucional" si la imagen es muy variada — mantiene legibilidad del texto blanco.'
       />
       <div className="rounded-md bg-slate-50 p-4">
         <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-slate-600">

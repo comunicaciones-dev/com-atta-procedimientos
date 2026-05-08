@@ -53,3 +53,6 @@ next-env.d.ts
 # si en algún momento queremos commitear contenido institucional;
 # por ahora cada entorno tiene su propio set)
 /data/
+
+# uploads del editor en dev local (en producción van a Vercel Blob)
+/public/uploads/
