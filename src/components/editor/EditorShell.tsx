@@ -7,6 +7,7 @@ import type { Boletin, Seccion, SeccionBloque } from "@/lib/schema";
 import { EditorForm } from "./EditorForm";
 import { EditorPreview } from "./EditorPreview";
 import { EditorSidebar, type Selection } from "./EditorSidebar";
+import { ExportarMenu } from "./ExportarMenu";
 import { useAutosave } from "./useAutosave";
 
 /**
@@ -193,6 +194,7 @@ function Topbar({
       </div>
       <div className="flex shrink-0 items-center gap-3">
         <SaveIndicator state={saveState} />
+        <ExportarMenu id={boletin.id} />
         <Link
           href="/"
           className="rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50"

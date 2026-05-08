@@ -2,6 +2,7 @@ import "@/styles/uatta.css";
 import "@/styles/uatta-extensions.css";
 import { notFound } from "next/navigation";
 import { Boletin } from "@/components/boletin/Boletin";
+import { ExportarToolbar } from "@/components/boletin/ExportarToolbar";
 import { leerPorNumero } from "@/lib/storage";
 
 export const dynamic = "force-dynamic";
@@ -29,8 +30,11 @@ export default async function PublicadoPage({ params }: Props) {
   if (!boletin) notFound();
 
   return (
-    <div className="uatta-page">
-      <Boletin boletin={boletin} />
-    </div>
+    <>
+      <ExportarToolbar numero={n} />
+      <div className="uatta-page">
+        <Boletin boletin={boletin} />
+      </div>
+    </>
   );
 }

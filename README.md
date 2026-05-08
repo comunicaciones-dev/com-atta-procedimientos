@@ -91,7 +91,56 @@ en vivo y publicación con URL canónica.
   subtítulo no vacíos, todas las secciones con título, email del footer
   con @), confirm, y redirect a `/n/[numero]` al confirmar.
 
-**Lo que sigue**: Hito 4 (exportadores PDF, HTML autocontenido, PNG, PPT).
+**Hito 4 · Exportadores — completado.**
+
+Cuatro endpoints bajo `/api/export/*`, cada uno acepta `?id=<id>` (drafts
+o publicados) o `?numero=<n>` (solo publicados). Todos devuelven el
+archivo con `Content-Disposition: attachment` para que el browser lo
+descargue directo.
+
+- **PDF** server-side ([api/export/pdf](src/app/api/export/pdf/route.ts)):
+  Playwright + `@sparticuz/chromium` navegan a `/render/exporter?id=...`,
+  miden la altura real del `<article class="uatta-boletin">`, y generan
+  un PDF de página única con dimensiones `980px × (alto + 80px)`. Para
+  esquivar la regla `@page { size: A4 }` de uatta.css, el endpoint
+  fuerza `emulateMedia: "screen"`.
+- **HTML autocontenido** ([api/export/html](src/app/api/export/html/route.ts)):
+  renderiza el `<Boletin/>` con `react-dom/server.node` (cargado por
+  `require` dinámico para esquivar el check estático de Next 15),
+  embebe `uatta.css` + `uatta-extensions.css`, inlinea logo y fondo
+  hero como `data:URI`, y bundlea `html2pdf.js` con un botón
+  "Descargar PDF" funcional. Sin recursos externos — el archivo se
+  puede compartir por mail o intranet y abrir offline.
+- **PNG portada** ([api/export/png](src/app/api/export/png/route.ts)):
+  screenshot de Playwright del topbar + header + hero + ribbon +
+  audiencia, en `clip` calculado desde el `bottom` del bloque de
+  audiencia. Viewport 800px con `deviceScaleFactor: 2` → output
+  ~1600px de ancho.
+- **PowerPoint** ([api/export/pptx](src/app/api/export/pptx/route.ts)):
+  `pptxgenjs` produce slide de portada institucional + 1 slide por
+  sección numerada (con bullets construidos de los bloques) + 1 slide
+  con el flujo en 2 columnas (rojo / navy). Paleta + tipografía
+  on-brand. La regla pixel-perfect no aplica al PPT — es su propio
+  formato.
+
+UX: dropdown "Exportar" en el topbar del editor
+([ExportarMenu](src/components/editor/ExportarMenu.tsx), client) y
+toolbar simple en `/n/[numero]` con 4 botones
+([ExportarToolbar](src/components/boletin/ExportarToolbar.tsx),
+server, sin Tailwind para mantener la ruta pública liviana).
+
+### Setup de Playwright en dev local
+
+`/api/export/pdf` y `/api/export/png` requieren Chrome instalado.
+`playwright-core` lo busca via `channel: "chrome"`. Si no está, falla
+con mensaje claro. En producción se usa `@sparticuz/chromium` que
+viene como dependencia.
+
+### Ruta de soporte
+
+- `/render/exporter?id=<id>` — render bare-bones del boletín por id
+  (drafts y publicados). Marcada `noindex` en metadata. Es la URL que
+  Playwright navega para PDF y PNG.
 
 ---
 

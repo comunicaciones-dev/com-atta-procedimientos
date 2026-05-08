@@ -56,3 +56,6 @@ next-env.d.ts
 
 # uploads del editor en dev local (en producción van a Vercel Blob)
 /public/uploads/
+
+# escratch dev temporal
+/public/_test/
