@@ -27,18 +27,38 @@ import type {
 } from "@/lib/schema";
 
 /**
- * Compone el background-shorthand del hero respetando hero.imagenFondo
- * (URL custom o default) y hero.overlayIntensidad (gradiente sobre la
- * imagen). Override por inline style sobre la regla CSS base de
- * .uatta-hero — uatta.css se mantiene verbatim según la regla del Hito 1.
+ * Compone el background-shorthand del hero respetando los cuatro
+ * controles del schema:
+ *  - hero.imagenFondo (URL custom o default)
+ *  - hero.overlayIntensidad (gradiente arriba de la imagen)
+ *  - hero.imagenEncaje (cover/contain/ancho-completo)
+ *  - hero.imagenPosicion (left/center/right; solo afecta a cover)
  *
- * El último gradiente del shorthand actúa como fallback si la imagen no
- * carga: replica la regla original de uatta.css.
+ * Override por inline style sobre la regla CSS base de .uatta-hero —
+ * uatta.css se mantiene verbatim según la regla del Hito 1. El último
+ * gradiente del shorthand actúa como fallback si la imagen no carga:
+ * replica la regla original.
  */
 function computeHeroBackground(hero: Hero): string {
   const url = hero.imagenFondo ?? "/uatta-hero-bg.jpg";
   const fallback = "linear-gradient(135deg, var(--u-grad-1), var(--u-grad-2))";
-  const layerImagen = `url("${url}") center right / cover no-repeat`;
+
+  const encaje = hero.imagenEncaje ?? "cover";
+  // El default histórico era center right / cover. Lo mantenemos como
+  // fallback cuando posicion no está seteada y encaje es cover.
+  const posicion = hero.imagenPosicion ?? (encaje === "cover" ? "right" : "center");
+
+  let posSize: string;
+  if (encaje === "cover") {
+    posSize = `${posicion} center / cover`;
+  } else if (encaje === "contain") {
+    posSize = "center center / contain";
+  } else {
+    // ancho-completo: imagen ocupa el 100% del ancho, alto auto.
+    posSize = `${posicion} center / 100% auto`;
+  }
+  const layerImagen = `url("${url}") ${posSize} no-repeat`;
+
   const overlay = hero.overlayIntensidad ?? "institucional";
   switch (overlay) {
     case "ninguno":

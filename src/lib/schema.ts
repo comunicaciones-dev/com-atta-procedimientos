@@ -194,12 +194,32 @@ export type Flujo = {
  */
 export type HeroOverlay = "institucional" | "tenue" | "ninguno";
 
+/**
+ * Cómo encaja la imagen del hero en su contenedor:
+ *  - "cover" (default): la imagen llena el hero, recortando lo que sobre.
+ *  - "contain": la imagen entra entera, puede haber espacio sólido alrededor.
+ *  - "ancho-completo": la imagen ocupa el 100% del ancho, alto auto. Puede
+ *    dejar espacio arriba o abajo si la proporción de la imagen es más
+ *    apaisada que la del hero.
+ */
+export type HeroEncaje = "cover" | "contain" | "ancho-completo";
+
+/**
+ * Posición horizontal de la imagen cuando el encaje recorta o no la centra.
+ * Solo aplica con encaje "cover" (con "contain" la imagen está siempre
+ * centrada por construcción; con "ancho-completo" no hay desplazamiento
+ * horizontal porque ya ocupa todo el ancho).
+ */
+export type HeroPosicion = "left" | "center" | "right";
+
 export type Hero = {
   eyebrow: string;
   titulo: string;
   subtitulo: string;
   imagenFondo?: string;
   overlayIntensidad?: HeroOverlay;
+  imagenEncaje?: HeroEncaje;
+  imagenPosicion?: HeroPosicion;
   rex: {
     numero: string;
     anio: number;

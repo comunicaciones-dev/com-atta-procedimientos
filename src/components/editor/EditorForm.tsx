@@ -7,7 +7,9 @@ import type {
   Footer as FooterModel,
   Flujo,
   Hero,
+  HeroEncaje,
   HeroOverlay,
+  HeroPosicion,
   Icono,
   Seccion,
   SeccionBloque,
@@ -227,6 +229,29 @@ function HeroForm({
       <ImagenFondoField
         value={hero.imagenFondo}
         onChange={(imagenFondo) => onChange({ ...hero, imagenFondo })}
+      />
+      <SelectField<HeroEncaje>
+        label="Encaje de la imagen"
+        value={hero.imagenEncaje ?? "cover"}
+        onChange={(imagenEncaje) => onChange({ ...hero, imagenEncaje })}
+        options={[
+          { value: "cover", label: "Cover (rellena el hero, puede recortar)" },
+          { value: "contain", label: "Contenida (imagen completa, puede dejar fondo)" },
+          { value: "ancho-completo", label: "Ancho completo (100% horizontal, sin recorte)" },
+        ]}
+      />
+      <SelectField<HeroPosicion>
+        label="Posición de la imagen"
+        value={hero.imagenPosicion ?? "right"}
+        onChange={(imagenPosicion) =>
+          onChange({ ...hero, imagenPosicion })
+        }
+        options={[
+          { value: "left", label: "Izquierda" },
+          { value: "center", label: "Centro" },
+          { value: "right", label: "Derecha (default histórico)" },
+        ]}
+        hint='Útil con "cover" para decidir qué parte queda visible cuando hay recorte. Con "contenida" se ignora.'
       />
       <SelectField<HeroOverlay>
         label="Overlay sobre la imagen"
