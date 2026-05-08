@@ -51,9 +51,25 @@ function computeHeroBackground(hero: Hero): string {
   }
 }
 
-type Props = { boletin: BoletinModel };
+type Props = {
+  boletin: BoletinModel;
+  /**
+   * Si true, agrega atributos `data-edit="<target>"` a los elementos
+   * editables del boletín. EditorPreview los usa para implementar
+   * "click en el preview para editar el campo correspondiente". El
+   * valor del atributo se parsea a Selection en el editor.
+   * Off por default: el render de /n/[numero], /render/demo y export
+   * no llevan estos atributos para mantener el HTML limpio.
+   */
+  editTargets?: boolean;
+};
 
-export function Boletin({ boletin }: Props) {
+/** Devuelve { 'data-edit': target } solo cuando editTargets es true. */
+function ed(target: string, on?: boolean): { "data-edit"?: string } {
+  return on ? { "data-edit": target } : {};
+}
+
+export function Boletin({ boletin, editTargets }: Props) {
   const numeroEdicion = String(boletin.numero).padStart(2, "0");
   const fechaLabel = `Edición N° ${numeroEdicion} · ${boletin.fecha.mes} ${boletin.fecha.anio}`;
 
@@ -74,17 +90,20 @@ export function Boletin({ boletin }: Props) {
           src="/uatta-logo.png"
           alt="Unidad Administradora TTA-TCP — Ministerio de Hacienda · Gobierno de Chile"
         />
-        <div className="uatta-header__meta">
+        <div
+          className="uatta-header__meta"
+          {...ed("metadata", editTargets)}
+        >
           <b>Boletín de Procedimientos</b>
           {fechaLabel}
         </div>
       </header>
 
-      <HeroBlock boletin={boletin} />
+      <HeroBlock boletin={boletin} editTargets={editTargets} />
 
       <div className="uatta-ribbon"></div>
 
-      <AudienciaBlock items={boletin.audiencia} />
+      <AudienciaBlock items={boletin.audiencia} editTargets={editTargets} />
 
       {boletin.secciones.map((seccion, idx) => (
         <SeccionView
@@ -96,15 +115,16 @@ export function Boletin({ boletin }: Props) {
             // última sección. Si hay flujo, lo enganchamos a la última.
             idx === boletin.secciones.length - 1 ? boletin.flujo : undefined
           }
+          editTargets={editTargets}
         />
       ))}
 
-      <CierreBlock cierre={boletin.cierre} />
+      <CierreBlock cierre={boletin.cierre} editTargets={editTargets} />
 
       <div style={{ height: "32px" }}></div>
       <div className="uatta-ribbon"></div>
 
-      <FooterBlock footer={boletin.footer} />
+      <FooterBlock footer={boletin.footer} editTargets={editTargets} />
     </article>
   );
 }
@@ -113,12 +133,16 @@ export function Boletin({ boletin }: Props) {
 // Hero
 // ---------------------------------------------------------------------
 
-function HeroBlock({ boletin }: Props) {
+function HeroBlock({ boletin, editTargets }: Props) {
   const rexLabel = `Descargar Resolución Exenta General N° ${boletin.hero.rex.numero} de ${boletin.hero.rex.anio}`;
   const heroBg = computeHeroBackground(boletin.hero);
 
   return (
-    <section className="uatta-hero" style={{ background: heroBg }}>
+    <section
+      className="uatta-hero"
+      style={{ background: heroBg }}
+      {...ed("hero", editTargets)}
+    >
       <span className="uatta-hero__eyebrow">{boletin.hero.eyebrow}</span>
       <h1>{parseInline(boletin.hero.titulo)}</h1>
       <p className="uatta-hero__sub">{parseInline(boletin.hero.subtitulo)}</p>
@@ -142,9 +166,15 @@ function HeroBlock({ boletin }: Props) {
 // Audiencia
 // ---------------------------------------------------------------------
 
-function AudienciaBlock({ items }: { items: AudienciaItem[] }) {
+function AudienciaBlock({
+  items,
+  editTargets,
+}: {
+  items: AudienciaItem[];
+  editTargets?: boolean;
+}) {
   return (
-    <div className="uatta-audience">
+    <div className="uatta-audience" {...ed("audiencia", editTargets)}>
       <h3 className="uatta-audience__title">¿A quién aplica este procedimiento?</h3>
       <ul className="uatta-audience__list">
         {items.map((item, i) => (
@@ -169,22 +199,44 @@ function SeccionView({
   seccion,
   numero,
   flujo,
+  editTargets,
 }: {
   seccion: Seccion;
   numero: number;
   flujo?: BoletinModel["flujo"];
+  editTargets?: boolean;
 }) {
   return (
     <section className="uatta-section">
-      <div className="uatta-section-head">
+      <div
+        className="uatta-section-head"
+        {...ed(`seccion:${seccion.id}`, editTargets)}
+      >
         <span className="uatta-num">{String(numero).padStart(2, "0")}</span>
         <h2>{parseInline(seccion.titulo)}</h2>
       </div>
-      {seccion.intro && <p>{parseInline(seccion.intro)}</p>}
-      {seccion.bloques.map((bloque, i) => (
-        <BloqueView key={i} bloque={bloque} />
-      ))}
-      {flujo && <FlujoBlock flujo={flujo} />}
+      {seccion.intro && (
+        <p {...ed(`seccion:${seccion.id}`, editTargets)}>
+          {parseInline(seccion.intro)}
+        </p>
+      )}
+      {seccion.bloques.map((bloque, i) =>
+        editTargets ? (
+          <div key={i} data-edit={`bloque:${seccion.id}:${i}`}>
+            <BloqueView bloque={bloque} />
+          </div>
+        ) : (
+          <BloqueView key={i} bloque={bloque} />
+        ),
+      )}
+      {flujo &&
+        (editTargets ? (
+          <div data-edit="flujo">
+            <FlujoBlock flujo={flujo} />
+          </div>
+        ) : (
+          <FlujoBlock flujo={flujo} />
+        ))}
     </section>
   );
 }
@@ -769,9 +821,15 @@ function FlujoBlock({ flujo }: { flujo: NonNullable<BoletinModel["flujo"]> }) {
 // Cierre + footer
 // ---------------------------------------------------------------------
 
-function CierreBlock({ cierre }: { cierre: BoletinModel["cierre"] }) {
+function CierreBlock({
+  cierre,
+  editTargets,
+}: {
+  cierre: BoletinModel["cierre"];
+  editTargets?: boolean;
+}) {
   return (
-    <aside className="uatta-closing">
+    <aside className="uatta-closing" {...ed("cierre", editTargets)}>
       <p>{parseInline(cierre.texto)}</p>
       <div className="uatta-principles">
         {cierre.principios.map((p, i) => (
@@ -782,9 +840,15 @@ function CierreBlock({ cierre }: { cierre: BoletinModel["cierre"] }) {
   );
 }
 
-function FooterBlock({ footer }: { footer: BoletinModel["footer"] }) {
+function FooterBlock({
+  footer,
+  editTargets,
+}: {
+  footer: BoletinModel["footer"];
+  editTargets?: boolean;
+}) {
   return (
-    <footer className="uatta-footer">
+    <footer className="uatta-footer" {...ed("footer", editTargets)}>
       <div>
         <h4>{parseInline(footer.contactoTitulo)}</h4>
         <div className="uatta-contact">

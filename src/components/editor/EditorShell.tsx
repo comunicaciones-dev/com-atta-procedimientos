@@ -138,7 +138,7 @@ export function EditorShell({ initial }: { initial: Boletin }) {
         publishing={publishing}
         onPublish={publish}
       />
-      <div className="grid flex-1 grid-cols-[280px_minmax(380px,440px)_1fr] overflow-hidden">
+      <div className="grid flex-1 grid-cols-[280px_minmax(380px,440px)_minmax(0,1fr)] overflow-hidden">
         <EditorSidebar
           boletin={boletin}
           selection={selection}
@@ -155,7 +155,11 @@ export function EditorShell({ initial }: { initial: Boletin }) {
           selection={selection}
           setBoletin={setBoletin}
         />
-        <EditorPreview boletin={boletin} />
+        <EditorPreview
+          boletin={boletin}
+          selection={selection}
+          onSelect={setSelection}
+        />
       </div>
     </div>
   );

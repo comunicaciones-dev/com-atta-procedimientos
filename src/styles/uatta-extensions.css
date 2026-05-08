@@ -102,3 +102,41 @@
   width: 16px;
   height: 16px;
 }
+
+/* ============================================================
+   Editor: click-to-edit visual feedback
+   ============================================================
+   Las reglas son scopeadas a .editor-preview-canvas para que solo
+   apliquen en el preview del editor; /n/[numero], /render/demo y
+   exports no tienen este wrapper, así que su HTML queda igual.
+
+   `data-edit="<target>"` lo agrega <Boletin editTargets/> a los
+   elementos editables; al click el editor lo parsea a Selection.
+
+   Estados:
+    - hover: outline azul tenue + cursor pointer
+    - seleccionado (data-selected-edit del wrapper coincide con el
+      data-edit del elemento): outline más fuerte y persistente
+   ============================================================ */
+
+.editor-preview-canvas [data-edit] {
+  cursor: pointer;
+  position: relative;
+  transition: outline-color 120ms ease;
+  outline: 2px solid transparent;
+  outline-offset: 2px;
+}
+
+.editor-preview-canvas [data-edit]:hover {
+  outline-color: rgba(0, 99, 175, 0.45);
+}
+
+/* La selección actual: el wrapper expone data-selected-edit con el
+   token actual; el CSS la levanta via attribute selector. Como CSS no
+   tiene selectores parametrizados, usamos "el data-edit del elemento
+   debe coincidir con data-selected-edit del ancestro" — no hay forma
+   directa, así que dejamos un truco: cualquier [data-edit] dentro de
+   un canvas con data-selected-edit recibe leve resaltado, y el JS
+   pone una clase `is-selected` sobre el elemento exacto. Para esta
+   versión simple usamos solo hover; la selección la sigue indicando
+   el sidebar y la barra de form. */
