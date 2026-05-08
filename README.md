@@ -55,8 +55,41 @@ en vivo y publicación con URL canónica.
 - Flujo end-to-end probado: crear → editar → publicar → ver en `/n/1`,
   todas mantienen las dimensiones pixel-perfect.
 
-**Lo que sigue**: Hito 3 (editor con cajas tipadas, drag-and-drop,
-autoguardado).
+**Hito 3 · Editor con cajas tipadas — completado.**
+
+- [`EditorShell`](src/components/editor/EditorShell.tsx) carga el draft
+  y mantiene el `Boletin` en un único `useState`. Cargado vía
+  `dynamic(..., { ssr: false })` desde
+  [`EditorShellClient`](src/components/editor/EditorShellClient.tsx)
+  para evitar mismatch de hidratación de los IDs internos de dnd-kit y
+  del formato de fecha localizado.
+- [`EditorSidebar`](src/components/editor/EditorSidebar.tsx): nav con
+  Metadata / Hero / Audiencia, secciones numeradas con drag-handle
+  ([@dnd-kit/sortable](https://github.com/clauderic/dnd-kit)) para
+  reordenar, lista de bloques de cada sección con drag-handle propio,
+  menú "+ Agregar bloque" con los 7 tipos del schema, eliminar con
+  confirm; y nav para Flujo / Cierre / Footer.
+- [`EditorForm`](src/components/editor/EditorForm.tsx): formularios
+  tipados para cada selección — Metadata (numero + fecha override),
+  Hero (eyebrow, título, subtítulo, REX), Audiencia (3 ítems con color),
+  Sección (título + intro), cada uno de los 7 tipos de bloque con sus
+  campos específicos (incluyendo las 4 variantes de tarjetas-grid),
+  Flujo, Cierre, Footer, todo con la convención inline `[[bold]] //em//`
+  documentada en cada hint.
+- [`EditorPreview`](src/components/editor/EditorPreview.tsx): render
+  vivo del `<Boletin/>` con `transform: scale` dinámico para encajar el
+  artículo de 980 px en el panel disponible.
+- [`useAutosave`](src/components/editor/useAutosave.ts): debounce de
+  800 ms desde el último cambio, PUT a `/api/boletines/[id]`, comparación
+  por JSON.stringify para evitar requests redundantes, abort de
+  in-flight requests cuando llega un cambio nuevo. Indicador en el
+  topbar: "Sin cambios" / "Guardando…" / "Guardado · hace Xs" / "Error:
+  ...".
+- **Botón Publicar** con validación (numero positivo, hero título y
+  subtítulo no vacíos, todas las secciones con título, email del footer
+  con @), confirm, y redirect a `/n/[numero]` al confirmar.
+
+**Lo que sigue**: Hito 4 (exportadores PDF, HTML autocontenido, PNG, PPT).
 
 ---
 
